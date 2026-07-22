@@ -57,6 +57,18 @@ export const PASSPORT_TOOLS: DocToolMeta[] = [
   { id: 'passport-validate',     name: 'Passport Validation', nameHi: 'पासपोर्ट मान्यता',   iconName: 'check-circle-outline',  color: PASSPORT_COLOR, description: 'Check passport photo meets government standards',    descHi: 'पासपोर्ट फोटो सरकारी मानकों के अनुसार है, जाँचें',   route: '/document-tools/passport/validation',    category: 'passport' },
 ];
 
+// ── Government Document Tools ─────────────────────────────────────────────────
+export const GOV_DOC_COLOR = '#F59E0B';
+export const GOV_DOC_TOOLS: DocToolMeta[] = [
+  { id: 'gov-doc-hub', name: 'Government Documents', nameHi: 'सरकारी दस्तावेज़', iconName: 'file-certificate-outline', color: GOV_DOC_COLOR, description: 'Process government certificates and documents offline', descHi: 'सरकारी प्रमाण पत्र और दस्तावेज़ ऑफलाइन प्रसंस्करण करें', route: '/document-tools/gov-docs', category: 'pdf' },
+];
+
+// ── CSC Utility Document Tools ─────────────────────────────────────────────────
+export const CSC_UTILITY_COLOR = '#8B5CF6';
+export const CSC_UTILITY_TOOLS: DocToolMeta[] = [
+  { id: 'csc-utility-hub', name: 'CSC Utility Tools', nameHi: 'CSC उपयोगिता टूल्स', iconName: 'store-outline', color: CSC_UTILITY_COLOR, description: 'CSC operator document tools — scan, PDF, OCR', descHi: 'CSC ऑपरेटर दस्तावेज़ टूल्स — स्कैन, PDF, OCR', route: '/document-tools/csc-utility', category: 'pdf' },
+];
+
 // ── PDF ────────────────────────────────────────────────────────────────────────
 export const PDF_COLOR = '#EF4444';
 export const PDF_TOOLS: DocToolMeta[] = [
@@ -75,6 +87,8 @@ export const PDF_TOOLS: DocToolMeta[] = [
   { id: 'pdf-password-protect',  name: 'Password Protect',    nameHi: 'पासवर्ड लगाएं',      iconName: 'lock-outline',              color: PDF_COLOR, description: 'Add password protection to PDF',                       descHi: 'PDF में पासवर्ड सुरक्षा जोड़ें',                   route: '/document-tools/pdf/password-protect', category: 'pdf' },
   { id: 'pdf-remove-password',   name: 'Remove Password',     nameHi: 'पासवर्ड हटाएं',      iconName: 'lock-open-variant-outline', color: PDF_COLOR, description: 'Remove password from an unlocked PDF',                 descHi: 'अनलॉक PDF से पासवर्ड हटाएं',                       route: '/document-tools/pdf/remove-password',  category: 'pdf' },
   { id: 'pdf-info',              name: 'PDF Information',     nameHi: 'PDF जानकारी',        iconName: 'information-outline',       color: PDF_COLOR, description: 'View metadata, pages, size and properties',           descHi: 'मेटाडेटा, पेज, साइज़ और प्रॉपर्टी देखें',           route: '/document-tools/pdf/info',             category: 'pdf' },
+  { id: 'pdf-document-scanner',  name: 'Document Scanner',    nameHi: 'दस्तावेज़ स्कैनर',  iconName: 'scan-helper',               color: PDF_COLOR, description: 'Scan and enhance documents, export as PDF',            descHi: 'दस्तावेज़ स्कैन और एन्हांस करें, PDF में निर्यात करें', route: '/document-tools/pdf/document-scanner', category: 'pdf' },
+  { id: 'pdf-image-to-text',     name: 'Image to Text',       nameHi: 'इमेज से टेक्स्ट',   iconName: 'text-recognition',          color: PDF_COLOR, description: 'Extract text from images using offline OCR',           descHi: 'ऑफलाइन OCR से इमेज से टेक्स्ट निकालें',             route: '/document-tools/pdf/image-to-text',    category: 'pdf' },
 ];
 
 // ── All document tools flat list ──────────────────────────────────────────────
@@ -85,6 +99,8 @@ export const ALL_DOC_TOOLS: DocToolMeta[] = [
   ...DL_TOOLS,
   ...PASSPORT_TOOLS,
   ...PDF_TOOLS,
+  ...GOV_DOC_TOOLS,
+  ...CSC_UTILITY_TOOLS,
 ];
 
 export function getDocTool(id: string): DocToolMeta | undefined {

@@ -107,6 +107,12 @@ import PdfRename           from '@/app/document-tools/pdf/rename';
 import PdfRotate           from '@/app/document-tools/pdf/rotate';
 import PdfSearch           from '@/app/document-tools/pdf/search';
 import PdfSplit            from '@/app/document-tools/pdf/split';
+import PdfToImage          from '@/app/document-tools/pdf/to-image';
+import PdfDocumentScanner  from '@/app/document-tools/pdf/document-scanner';
+import PdfImageToText      from '@/app/document-tools/pdf/image-to-text';
+// Government & CSC Document Tools
+import GovDocTools         from '@/app/document-tools/gov-docs/index';
+import CscUtilityTools     from '@/app/document-tools/csc-utility/index';
 
 // ── QR Tools ──────────────────────────────────────────────────────────────
 import QrTools     from '@/app/qr-tools/index';
@@ -256,6 +262,12 @@ export function AppNavigator() {
       <Stack.Screen name="PdfRotate"             component={PdfRotate} />
       <Stack.Screen name="PdfSearch"             component={PdfSearch} />
       <Stack.Screen name="PdfSplit"              component={PdfSplit} />
+      <Stack.Screen name="PdfToImage"            component={PdfToImage} />
+      <Stack.Screen name="PdfDocumentScanner"    component={PdfDocumentScanner} />
+      <Stack.Screen name="PdfImageToText"        component={PdfImageToText} />
+      {/* Government & CSC Document Tools */}
+      <Stack.Screen name="GovDocTools"           component={GovDocTools} />
+      <Stack.Screen name="CscUtilityTools"       component={CscUtilityTools} />
 
       {/* ── QR Tools ─────────────────────────────────────────────── */}
       <Stack.Screen name="QrTools"     component={QrTools} />

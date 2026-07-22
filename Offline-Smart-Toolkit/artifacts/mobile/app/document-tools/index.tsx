@@ -19,6 +19,8 @@ import {
   DL_TOOLS, DL_COLOR,
   PASSPORT_TOOLS, PASSPORT_COLOR,
   PDF_TOOLS, PDF_COLOR,
+  GOV_DOC_TOOLS, GOV_DOC_COLOR,
+  CSC_UTILITY_TOOLS, CSC_UTILITY_COLOR,
   ALL_DOC_TOOLS,
 } from '@/lib/features/documents/tools';
 import type { DocToolMeta } from '@/lib/features/documents/types';
@@ -34,12 +36,14 @@ interface CategoryCard {
 }
 
 const CATEGORIES: CategoryCard[] = [
-  { id: 'aadhaar', name: 'Aadhaar Tools', iconName: 'card-account-details-outline', color: AADHAAR_COLOR, gradient: ['#F97316', '#EA580C'], tools: AADHAAR_TOOLS, route: '/document-tools/aadhaar' },
-  { id: 'pan',     name: 'PAN Tools',     iconName: 'credit-card-outline',           color: PAN_COLOR,     gradient: ['#06B6D4', '#0891B2'], tools: PAN_TOOLS,     route: '/document-tools/pan' },
-  { id: 'voter',   name: 'Voter ID',      iconName: 'vote-outline',                  color: VOTER_COLOR,   gradient: ['#8B5CF6', '#7C3AED'], tools: VOTER_TOOLS,   route: '/document-tools/voter' },
-  { id: 'dl',      name: 'Driving License', iconName: 'car-outline',                 color: DL_COLOR,      gradient: ['#10B981', '#059669'], tools: DL_TOOLS,      route: '/document-tools/driving-license' },
-  { id: 'passport', name: 'Passport',     iconName: 'passport',                      color: PASSPORT_COLOR, gradient: ['#3B82F6', '#2563EB'], tools: PASSPORT_TOOLS, route: '/document-tools/passport' },
-  { id: 'pdf',     name: 'PDF Tools',     iconName: 'file-pdf-box',                  color: PDF_COLOR,      gradient: ['#EF4444', '#DC2626'], tools: PDF_TOOLS,     route: '/document-tools/pdf' },
+  { id: 'aadhaar',      name: 'Aadhaar Tools',        iconName: 'card-account-details-outline', color: AADHAAR_COLOR,      gradient: ['#F97316', '#EA580C'], tools: AADHAAR_TOOLS,      route: '/document-tools/aadhaar' },
+  { id: 'pan',          name: 'PAN Tools',             iconName: 'credit-card-outline',          color: PAN_COLOR,          gradient: ['#06B6D4', '#0891B2'], tools: PAN_TOOLS,          route: '/document-tools/pan' },
+  { id: 'voter',        name: 'Voter ID',              iconName: 'vote-outline',                 color: VOTER_COLOR,        gradient: ['#8B5CF6', '#7C3AED'], tools: VOTER_TOOLS,        route: '/document-tools/voter' },
+  { id: 'dl',           name: 'Driving License',       iconName: 'car-outline',                  color: DL_COLOR,           gradient: ['#10B981', '#059669'], tools: DL_TOOLS,           route: '/document-tools/driving-license' },
+  { id: 'passport',     name: 'Passport',              iconName: 'passport',                     color: PASSPORT_COLOR,     gradient: ['#3B82F6', '#2563EB'], tools: PASSPORT_TOOLS,     route: '/document-tools/passport' },
+  { id: 'pdf',          name: 'PDF Tools',             iconName: 'file-pdf-box',                 color: PDF_COLOR,          gradient: ['#EF4444', '#DC2626'], tools: PDF_TOOLS,          route: '/document-tools/pdf' },
+  { id: 'gov-docs',     name: 'Government Documents',  iconName: 'file-certificate-outline',     color: GOV_DOC_COLOR,      gradient: ['#F59E0B', '#D97706'], tools: GOV_DOC_TOOLS,      route: '/document-tools/gov-docs' },
+  { id: 'csc-utility',  name: 'CSC Utility Tools',     iconName: 'store-outline',                color: CSC_UTILITY_COLOR,  gradient: ['#8B5CF6', '#7C3AED'], tools: CSC_UTILITY_TOOLS,  route: '/document-tools/csc-utility' },
 ];
 
 export default function DocumentToolsHome() {

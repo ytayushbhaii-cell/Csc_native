@@ -78,6 +78,7 @@ export const ROUTE_TO_SCREEN: Record<string, string> = {
   '/document-tools/voter/back-crop':               'VoterBackCrop',
   '/document-tools/voter/detect':                   'VoterDetect',
   '/document-tools/voter/print-layout':             'VoterPrintLayout',
+  '/document-tools/voter/a4-layout':               'VoterPrintLayout',
 
   '/document-tools/driving-license':                'DocumentDrivingLicense',
   '/document-tools/driving-license/back-crop':      'DrivingBackCrop',
@@ -106,6 +107,13 @@ export const ROUTE_TO_SCREEN: Record<string, string> = {
   '/document-tools/pdf/rotate':                     'PdfRotate',
   '/document-tools/pdf/search':                     'PdfSearch',
   '/document-tools/pdf/split':                      'PdfSplit',
+  '/document-tools/pdf/to-image':                   'PdfToImage',
+  '/document-tools/pdf/document-scanner':           'PdfDocumentScanner',
+  '/document-tools/pdf/image-to-text':              'PdfImageToText',
+
+  // ── Government & CSC Document Tools ───────────────────────────────────────
+  '/document-tools/gov-docs':                       'GovDocTools',
+  '/document-tools/csc-utility':                    'CscUtilityTools',
 
   // ── QR Tools ──────────────────────────────────────────────────────────────
   '/qr-tools':            'QrTools',
