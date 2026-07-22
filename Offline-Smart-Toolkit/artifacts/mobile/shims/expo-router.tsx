@@ -5,7 +5,7 @@
  * existing screen files use (useRouter, usePathname, Redirect, Stack, Link).
  * Metro redirects `expo-router` imports here via resolveRequest in metro.config.js.
  */
-import React, { useEffect, ComponentType } from 'react';
+import React, { useEffect, useRef, ComponentType } from 'react';
 import {
   useNavigation,
   useRoute,
@@ -109,20 +109,40 @@ export function Link({ href, children, style, ...rest }: LinkProps) {
   );
 }
 
+// ─── useFocusEffect ───────────────────────────────────────────────────────────
+// Runs a callback whenever the screen comes into focus.
+
+import { useFocusEffect as rnUseFocusEffect } from '@react-navigation/native';
+
+export function useFocusEffect(callback: () => (() => void) | void): void {
+  rnUseFocusEffect(
+    React.useCallback(() => {
+      return callback() ?? undefined;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []),
+  );
+}
+
 // ─── Stack (no-op) ────────────────────────────────────────────────────────────
 // The actual navigator is in AppNavigator.tsx; these are no-ops for layout files.
 
 const StackScreenNoOp: ComponentType<any> = () => null;
 
+interface StackProps {
+  children?: React.ReactNode;
+  screenOptions?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
 export const Stack = Object.assign(
-  ({ children }: { children?: React.ReactNode }) => <>{children}</>,
+  ({ children }: StackProps) => <>{children}</>,
   { Screen: StackScreenNoOp },
 );
 
 // ─── Tabs (no-op) ────────────────────────────────────────────────────────────
 
 export const Tabs = Object.assign(
-  ({ children }: { children?: React.ReactNode }) => <>{children}</>,
+  ({ children }: StackProps) => <>{children}</>,
   { Screen: StackScreenNoOp },
 );
 

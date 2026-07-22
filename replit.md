@@ -2,15 +2,16 @@
 
 ## Overview
 
-An offline-first mobile toolkit (Expo / React Native) for CSC Centers, Cyber Cafes, Photo Studios, and Offices. All processing happens 100% on-device — no internet, no cloud, no API calls required.
+An offline-first mobile toolkit for CSC Centers, Cyber Cafes, Photo Studios, and Offices.
+All processing happens 100% on-device — no internet, no cloud, no API calls.
 
 ### Stack
-- **Framework:** Expo SDK 54, expo-router v6 (file-based navigation)
-- **UI:** React Native Web + react-native-reanimated, MaterialCommunityIcons, expo-linear-gradient
-- **AI / ML:** TensorFlow.js (CPU + WebGL backends), ONNX Runtime Web (wasm)
+- **Framework:** React Native CLI 0.81.5 (migrated from Expo managed workflow)
+- **Navigation:** React Navigation v7 (Stack navigator, 100+ screens)
+- **UI:** react-native-reanimated, react-native-vector-icons, react-native-linear-gradient
+- **AI / ML:** TensorFlow.js (CPU backend), ONNX Runtime React Native
 - **PDF:** pdf-lib (pure-JS, offline)
 - **OCR:** Tesseract.js (offline WASM)
-- **DB:** expo-sqlite (native) / no-op web stubs
 - **State:** React Context (AppContext, ThemeContext, DrawerContext, SettingsContext)
 - **Package manager:** pnpm (workspace monorepo)
 
@@ -18,120 +19,100 @@ An offline-first mobile toolkit (Expo / React Native) for CSC Centers, Cyber Caf
 ```
 Offline-Smart-Toolkit/
   artifacts/
-    mobile/       ← Expo app (the main deliverable)
+    mobile/       ← React Native CLI app (main deliverable)
     api-server/   ← Express + Drizzle ORM backend (optional)
 ```
 
-## How to run
+## How to run (development info page)
 
 Workflow: **Start application**
 ```
-cd Offline-Smart-Toolkit/artifacts/mobile && PORT=5000 EXPO_PUBLIC_PORT=5000 pnpm exec expo start --web --port 5000
+cd Offline-Smart-Toolkit/artifacts/mobile && PORT=5000 node server/dev-server.js
 ```
+Opens the React Native CLI dev info page on port 5000.
 
-The web build opens on port 5000. Native (Android/iOS) is built separately via EAS Build.
+## Metro Bundler (for device/emulator)
 
-## APK Build Instructions
-
-### Prerequisites
-1. Install EAS CLI globally: `npm install -g eas-cli`
-2. Log in to Expo account: `eas login`
-3. Link project to Expo: `eas init` (run inside `Offline-Smart-Toolkit/artifacts/mobile/`)
-
-### Build Configuration
-The `eas.json` file is at `Offline-Smart-Toolkit/artifacts/mobile/eas.json` with three profiles:
-
-| Profile | Command | Output |
-|---|---|---|
-| Development (debug APK) | `eas build --platform android --profile development` | `app-debug.apk` |
-| Preview (release APK) | `eas build --platform android --profile preview` | `app-release.apk` |
-| Production (release APK) | `eas build --platform android --profile production` | `app-release.apk` |
-
-### Quick APK Build (Preview)
 ```bash
 cd Offline-Smart-Toolkit/artifacts/mobile
-eas build --platform android --profile preview --local
+npx react-native start          # Metro on port 8081
+npx react-native run-android    # Build & install on connected device
 ```
 
-> **Note:** `--local` builds on this machine. Remove it to build on Expo's cloud servers.
+## APK Build
 
-### App Configuration
+```bash
+cd Offline-Smart-Toolkit/artifacts/mobile/android
+./gradlew assembleDebug         # Debug APK
+./gradlew assembleRelease       # Release APK
+```
+
+Output: `android/app/build/outputs/apk/`
+
+## App Configuration
 | Field | Value |
 |---|---|
 | App Name | CSC Smart Toolkit |
 | Package Name | com.cscsmarttoolkit.app |
 | Version | 1.0.0 |
-| Bundle ID (iOS) | com.cscsmarttoolkit.app |
-| Min SDK | Android 5.0+ (API 21) |
-| Target SDK | Android 14 (API 34) |
+| Min SDK | Android 7.0+ (API 24) |
+| Target SDK | Android 15 (API 35) |
 
-### Required Permissions (auto-added by Expo plugins)
-- `CAMERA` — QR scanner, document scanner
-- `READ_EXTERNAL_STORAGE` / `WRITE_EXTERNAL_STORAGE` — file import/export
-- `READ_MEDIA_IMAGES` — Android 13+ photo access
+## Phase 1 Migration — Expo → React Native CLI ✅
 
-### Build Without EAS (Local Gradle)
-```bash
-cd Offline-Smart-Toolkit/artifacts/mobile
-pnpm exec expo prebuild --platform android --clean
-cd android
-./gradlew assembleRelease
-# APK output: android/app/build/outputs/apk/release/app-release.apk
-```
+### What was done
+- **Entry point:** `index.js` uses `AppRegistry.registerComponent` (pure RN CLI)
+- **Navigation:** `App.tsx` → `NavigationContainer` → `AppNavigator.tsx` (flat Stack, 100+ screens)
+- **Expo shims:** All `expo-*` JS APIs shimmed via `shims/` + Metro `resolveRequest` redirects
+- **Android project:** Full `android/` folder with Gradle, Kotlin, permissions, fonts
+- **MainApplication.kt:** Pure `DefaultReactNativeHost` — no Expo module wrapper
+- **Autolinking:** All Expo packages blocked in `react-native.config.js` (JS handled by shims)
+- **tsconfig.json:** Standalone (no `expo/tsconfig.base` dependency)
+- **babel.config.js:** `@react-native/babel-preset` (no Expo Babel preset)
+- **metro.config.js:** `@react-native/metro-config` with shim redirects, pdf-lib CJS fix, ORT WASM fix
 
-## Feature modules
+### Expo shim map (Metro → shims/)
+| Import | Shimmed to |
+|---|---|
+| `expo-router` | React Navigation (useRouter, Link, Redirect, Stack) |
+| `@expo/vector-icons` | react-native-vector-icons |
+| `expo-linear-gradient` | react-native-linear-gradient |
+| `expo-status-bar` | React Native StatusBar |
+| `expo-clipboard` | @react-native-clipboard/clipboard |
+| `expo-haptics` | react-native-haptic-feedback |
+| `expo-splash-screen` | No-op (native splash via styles.xml) |
+| `expo-font` | No-op (fonts in assets/fonts/) |
+| `expo-constants` | Inline constants |
+| `expo-linking` | React Native Linking |
 
-| Module | Route | Status |
+## Feature modules (129 screens)
+
+| Module | Route prefix | Screens |
 |---|---|---|
-| Photo Tools (BG remove, segmentation, etc.) | `/photo-tools` | ✅ Part 3 |
-| Document Tools (Aadhaar, PAN, Voter, DL, Passport, PDF) | `/document-tools` | ✅ Part 4 |
-| QR & Barcode | `/qr-tools`, `/barcode-tools` | ✅ Part 5 |
-| Signature & Stamp | `/signature-tools`, `/stamp-maker` | ✅ Part 5 |
-| ID Card Generator | `/id-card-tools` | ✅ Part 6 |
-| Print Layout | `/print-tools` | ✅ Part 7 |
-| Utility Tools | `/utility-tools` | ✅ Part 8 |
-| Settings | `/settings` | ✅ Part 9 |
-
-## Screen Inventory (Part 11 Audit — 129 total screens)
-
-### Tabs (main navigation)
-- `(tabs)/index.tsx` — Branded splash screen (3s → dashboard)
-- `(tabs)/dashboard.tsx` — Dashboard home
-- `(tabs)/tools.tsx` — All tools grid
-- `(tabs)/search.tsx` — Search
-- `(tabs)/favorites.tsx` — Favorites
-- `(tabs)/recent.tsx` — Recent files
-- `(tabs)/history.tsx` — Usage history
-- `(tabs)/most-used.tsx` — Most-used tools
-- `(tabs)/settings.tsx` — Settings hub
-
-### Photo Tools (25 screens)
-background-changer, background-remove, batch-rename, batch-resize, blue-background, blur-background, color-correction, compress, converter, crop, dpi-converter, duplicate-finder, enhance, face-center, face-restore, metadata-viewer, mirror, passport-photo, red-background, resize, rotate-flip, transparent-png, watermark, white-background
-
-### Document Tools (26 screens)
-Aadhaar (9), PAN (6), Voter (5), Driving License (5), Passport (5), PDF (12 — compress, delete-pages, extract-pages, from-image, info, merge, ocr, password-protect, rearrange, remove-password, rename, rotate, search, split, to-image)
-
-### QR Tools: generator, scanner
-### Barcode Tools: generator, scanner
-### Signature Tools: bg-remove, maker
-### Stamp Maker: company-stamp, csc-stamp
-### ID Card Tools: custom, employee, student, visitor
-### Print Tools: a4-layout, custom-paper, multiple-copies, passport-sheet, print-preview
-### Utility Tools: age-calculator, calendar, percentage-calculator
-### Settings: backup, default-folder, language, print-size, theme
+| Photo Tools | `/photo-tools` | 25 |
+| Document Tools | `/document-tools` | 26 (Aadhaar, PAN, Voter, DL, Passport, PDF) |
+| QR Tools | `/qr-tools` | 2 |
+| Barcode Tools | `/barcode-tools` | 2 |
+| Signature & Stamp | `/signature-tools`, `/stamp-maker` | 5 |
+| ID Card Generator | `/id-card-tools` | 4 |
+| Print Layout | `/print-tools` | 5 |
+| Utility Tools | `/utility-tools` | 3 |
+| Settings | `/settings` | 6 |
+| Dashboard / Tabs | `/dashboard` etc. | 8 |
 
 ## Key architecture notes
 
-- **Web stubs:** Every SQLite-backed `db.ts` has a `db.web.ts` no-op sibling. Metro picks `.web.ts` automatically on web builds.
-- **Metro config:** `metro.config.js` has `resolveRequest` overrides to force pdf-lib → CJS and handles ONNX/WASM as assets.
-- **Platform shadows:** All `shadow*` style props wrapped in `Platform.select` for web/native compatibility.
-- **Offline guarantee:** No `fetch()` calls to external URLs in any tool screen. All AI models are bundled in `assets/models/` or `assets/ort-wasm/`.
-- **ortLoader:** `.web.ts` / `.native.ts` platform extensions handle ONNX Runtime loading. `ortLoader.ts` provides TypeScript type fallback.
+- **Expo shims:** Every `expo-*` import is redirected by Metro to `shims/` — screen files need no changes
+- **Route mapping:** `navigation/routes.ts` maps Expo-router style paths to React Navigation screen names
+- **Metro config:** `resolveRequest` handles shims, pdf-lib CJS, ORT WASM asset loading
+- **Autolinking:** All Expo packages disabled in `react-native.config.js` — native RN packages used instead
+- **Offline guarantee:** No external fetch calls; all AI models bundled in `assets/models/`
+- **Fonts:** Inter family in `android/app/src/main/assets/fonts/`
 
 ## User preferences
 
 - Everything must work 100% offline (no API, no internet, no cloud)
-- Flutter migration must be possible in the future (keep architecture flat and service-oriented)
+- Android only
+- Preserve all existing UI — no redesigns
 - Material Design aesthetic, light + dark theme support
-- Premium cards, rounded corners, smooth animations
 - Package name: `com.cscsmarttoolkit.app`

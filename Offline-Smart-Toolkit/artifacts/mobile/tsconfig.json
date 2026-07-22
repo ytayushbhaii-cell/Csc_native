@@ -1,10 +1,8 @@
 {
   "compilerOptions": {
     "target": "ESNext",
-    "module": "commonjs",
-    "lib": [
-      "ESNext"
-    ],
+    "module": "ESNext",
+    "lib": ["ESNext", "DOM"],
     "jsx": "react-native",
     "strict": true,
     "moduleResolution": "bundler",
@@ -14,9 +12,12 @@
     "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./*"
-      ]
+      "@/*": ["./*"],
+      "expo-router": ["./shims/expo-router"],
+      "expo-status-bar": ["./shims/expo-status-bar"],
+      "expo-linear-gradient": ["./shims/expo-linear-gradient"],
+      "@expo/vector-icons": ["./shims/expo-vector-icons"],
+      "@expo-google-fonts/inter": ["./shims/expo-google-fonts-inter"]
     }
   },
   "include": [
@@ -29,7 +30,7 @@
     "node_modules",
     "android",
     "ios",
-    "dist"
-  ],
-  "extends": "expo/tsconfig.base"
+    "dist",
+    "static-build"
+  ]
 }

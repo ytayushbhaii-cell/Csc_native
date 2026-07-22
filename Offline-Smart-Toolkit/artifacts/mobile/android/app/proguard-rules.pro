@@ -16,9 +16,6 @@
 -keep class org.tensorflow.** { *; }
 -dontwarn org.tensorflow.**
 
-# ─── Expo modules ─────────────────────────────────────────────────────────────
--keep class expo.modules.** { *; }
-
 # ─── React Native core ────────────────────────────────────────────────────────
 -keep class com.facebook.react.** { *; }
 -keep class com.facebook.hermes.** { *; }
