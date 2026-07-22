@@ -15,6 +15,7 @@
  *  • Better sharpen    — multi-scale unsharp mask (edge-aware)
  *  • Better blur       — 3-pass separable box (Gaussian approximation)
  */
+import { Platform } from 'react-native';
 import { convertFormat, SaveFormat } from './imageOps';
 import { writePngFromRGBA } from './exportUtils';
 
@@ -45,6 +46,39 @@ async function ensureBackend(): Promise<void> {
   return backendReady;
 }
 
+// ─── Web Canvas fallback decoder ──────────────────────────────────────────────
+// On web the HTML Canvas API is always available and decodes any browser-
+// supported image format (JPEG, PNG, WebP…) into raw RGBA pixels without
+// needing TF.js.  This is faster, uses less memory, and avoids TF.js
+// initialisation failures entirely on the web platform.
+
+async function decodeToRGBAFromCanvas(uri: string): Promise<RGBAImage> {
+  return new Promise<RGBAImage>((resolve, reject) => {
+    const img: HTMLImageElement = new (window as any).Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const canvas: HTMLCanvasElement = document.createElement('canvas');
+        canvas.width  = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { reject(new Error('Canvas 2D context unavailable')); return; }
+        ctx.drawImage(img, 0, 0);
+        const { data } = ctx.getImageData(0, 0, img.width, img.height);
+        resolve({
+          width:  img.width,
+          height: img.height,
+          pixels: new Uint8ClampedArray(data),
+        });
+      } catch (err) {
+        reject(err);
+      }
+    };
+    img.onerror = () => reject(new Error('Canvas image decode failed — check URI and CORS headers'));
+    img.src = uri;
+  });
+}
+
 // ─── Core types ───────────────────────────────────────────────────────────────
 
 export interface RGBAImage {
@@ -57,6 +91,13 @@ export interface RGBAImage {
 // ─── Decode / Encode ──────────────────────────────────────────────────────────
 
 export async function decodeToRGBA(uri: string): Promise<RGBAImage> {
+  // Web: Canvas API is always available and is faster / more reliable than TF.js.
+  // Use it as the primary path to avoid the TF.js init overhead and failures.
+  if (Platform.OS === 'web') {
+    return decodeToRGBAFromCanvas(uri);
+  }
+
+  // Native: TF.js CPU backend (no Canvas API in React Native)
   await ensureBackend();
   if (!_tf || !_decodeJpeg) throw new Error('TF.js unavailable on this platform');
   const tf = _tf;

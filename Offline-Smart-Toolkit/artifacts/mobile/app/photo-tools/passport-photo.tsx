@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
 import { ToolScreenLayout } from '@/components/photo-tools/ToolScreenLayout';
@@ -9,6 +9,7 @@ import { ImageUploadWidget } from '@/components/photo-tools/ImageUploadWidget';
 import { BeforeAfterToggle } from '@/components/photo-tools/BeforeAfterSlider';
 import { ProcessingSteps, makeSteps, updateStep } from '@/components/photo-tools/ProcessingSteps';
 import { AIModelBadge } from '@/components/photo-tools/AIModelBadge';
+import { ModelDownloadGate } from '@/components/photo-tools/ModelDownloadGate';
 import { segmentPerson, removeBackground } from '@/lib/photoTools/segmentation';
 import { resizeAndCoverCrop } from '@/lib/photoTools/imageOps';
 import { buildPrintSheetPdf } from '@/lib/photoTools/pdfUtils';
@@ -17,6 +18,8 @@ import { guessFileName, exportFile } from '@/lib/photoTools/exportUtils';
 import type { PickedImage } from '@/lib/photoTools/types';
 
 const COLOR = '#3B82F6';
+// birefnet + u2net: same model set as BackgroundSwapScreen
+const REQUIRED_MODEL_IDS = ['birefnet', 'u2net'];
 const DPI = 300;
 const mm = (v: number) => Math.round((v / 25.4) * DPI);
 
@@ -41,6 +44,8 @@ const STEPS = [
 
 export default function PassportPhotoScreen() {
   const colors = useColors();
+  // On native, BodyPix provides a zero-download fallback; on web we require ONNX.
+  const [modelsReady, setModelsReady] = useState(Platform.OS !== 'web');
   const [image, setImage] = useState<PickedImage | null>(null);
   const [sizeId, setSizeId] = useState(SIZES[0].id);
   const [copies, setCopies] = useState(8);
@@ -137,6 +142,18 @@ export default function PassportPhotoScreen() {
   return (
     <ToolScreenLayout title="Passport Photo" subtitle="Real passport-quality — auto face center + print sheet" iconName="card-account-details" color={COLOR} onReset={reset}>
 
+      {/* Model download gate — web requires ONNX; native uses BodyPix fallback */}
+      {Platform.OS === 'web' && !modelsReady && (
+        <ModelDownloadGate
+          modelIds={REQUIRED_MODEL_IDS}
+          onReady={() => setModelsReady(true)}
+          accentColor={COLOR}
+        />
+      )}
+
+      {modelsReady && (
+        <>
+
       {/* Info + AI badge */}
       <View style={[styles.infoBanner, { backgroundColor: COLOR + '0D', borderColor: COLOR + '30', borderRadius: colors.radius }]}>
         <MaterialCommunityIcons name="robot-outline" size={15} color={COLOR} />
@@ -210,6 +227,9 @@ export default function PassportPhotoScreen() {
               {buildingSheet ? 'Building sheet…' : 'Download Print Sheet (PDF)'}
             </Text>
           </TouchableOpacity>
+        </>
+      )}
+
         </>
       )}
     </ToolScreenLayout>

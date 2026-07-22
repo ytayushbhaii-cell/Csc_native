@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
 import { ToolScreenLayout } from '@/components/photo-tools/ToolScreenLayout';
@@ -9,10 +9,14 @@ import { ImageUploadWidget } from '@/components/photo-tools/ImageUploadWidget';
 import { BeforeAfterToggle } from '@/components/photo-tools/BeforeAfterSlider';
 import { ProcessingSteps, makeSteps, updateStep } from '@/components/photo-tools/ProcessingSteps';
 import { AIModelBadge } from '@/components/photo-tools/AIModelBadge';
+import { ModelDownloadGate } from '@/components/photo-tools/ModelDownloadGate';
 import { blurBackground } from '@/lib/photoTools/segmentation';
 import { addRecentFile, recordToolUsage } from '@/lib/photoTools/db';
 import { guessFileName } from '@/lib/photoTools/exportUtils';
 import type { PickedImage } from '@/lib/photoTools/types';
+
+// birefnet + u2net: primary model + compact fallback (same as BackgroundSwapScreen)
+const REQUIRED_MODEL_IDS = ['birefnet', 'u2net'];
 
 const COLOR = '#6366F1';
 
@@ -32,6 +36,8 @@ const STEPS = [
 
 export default function BlurBackgroundScreen() {
   const colors = useColors();
+  // On native, BodyPix provides a zero-download fallback; on web we require ONNX.
+  const [modelsReady, setModelsReady] = useState(Platform.OS !== 'web');
   const [image, setImage]   = useState<PickedImage | null>(null);
   const [levelId, setLevelId] = useState('medium');
   const [processing, setProcessing] = useState(false);
@@ -72,6 +78,17 @@ export default function BlurBackgroundScreen() {
   return (
     <ToolScreenLayout title="Blur Background" subtitle="Portrait-mode — keep subject sharp, blur background" iconName="blur" color={COLOR} onReset={reset}>
 
+      {/* Model download gate — web requires ONNX; native uses BodyPix fallback */}
+      {Platform.OS === 'web' && !modelsReady && (
+        <ModelDownloadGate
+          modelIds={REQUIRED_MODEL_IDS}
+          onReady={() => setModelsReady(true)}
+          accentColor={COLOR}
+        />
+      )}
+
+      {modelsReady && (
+        <>
       <View style={[styles.infoBanner, { backgroundColor: COLOR + '0D', borderColor: COLOR + '30', borderRadius: colors.radius }]}>
         <MaterialCommunityIcons name="robot-outline" size={15} color={COLOR} />
         <Text style={[styles.infoText, { color: colors.foreground, fontFamily: 'Inter_400Regular' }]}>
@@ -118,6 +135,8 @@ export default function BlurBackgroundScreen() {
         <>
           <BeforeAfterToggle beforeUri={image.uri} afterUri={result.uri} color={COLOR} />
           <ResultActions uri={result.uri} fileName={guessFileName('blur-bg', 'png')} color={COLOR} onReset={reset} />
+        </>
+      )}
         </>
       )}
     </ToolScreenLayout>

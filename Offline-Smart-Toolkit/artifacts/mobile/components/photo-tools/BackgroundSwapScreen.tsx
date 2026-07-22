@@ -207,8 +207,12 @@ export function BackgroundSwapScreen({
   return (
     <ToolScreenLayout title={title} subtitle={subtitle} iconName={iconName} color={color} onReset={reset}>
 
-      {/* ── Model download gate (web only — native uses BodyPix, no ONNX download needed) ── */}
-      {Platform.OS === 'web' && !modelsReady && (
+      {/* ── Model download gate — shown on all platforms until models are cached.
+           On native: ONNX models are downloaded to device storage (expo-file-system).
+           On web:    models are stored in IndexedDB.
+           ModelDownloadGate's isDownloadableOnCurrentPlatform() gracefully skips
+           any model whose URL is not absolute HTTPS on native. ── */}
+      {!modelsReady && (
         <ModelDownloadGate
           modelIds={REQUIRED_MODEL_IDS}
           onReady={() => setModelsReady(true)}
