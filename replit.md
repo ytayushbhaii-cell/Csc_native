@@ -23,13 +23,25 @@ Offline-Smart-Toolkit/
     api-server/   ← Express + Drizzle ORM backend (optional)
 ```
 
-## How to run (development info page)
+## How to run (web preview — Replit)
 
 Workflow: **Start application**
 ```
-cd Offline-Smart-Toolkit/artifacts/mobile && PORT=5000 node server/dev-server.js
+cd Offline-Smart-Toolkit/artifacts/mobile && npx webpack serve --config webpack.config.js
 ```
-Opens the React Native CLI dev info page on port 5000.
+Bundles the app with react-native-web and serves on port 5000. The **CSC Smart Toolkit Home Screen** renders in the Replit preview pane with all icons, navigation, and tool grids.
+
+### Web build — what works
+- Full Home/Dashboard screen with Overview stats and Quick Access grid
+- All navigation via React Navigation v7 Stack
+- react-native-vector-icons (fonts injected via `shims/loadIconFonts.web.ts`)
+- expo-modules-core shimmed (`shims/expo-modules-core.ts`) — bypasses TS source babel can't parse
+- All expo-* packages shimmed for webpack (see shim map below)
+
+### Web build — limitations (web-only, not on-device)
+- Native ONNX / TensorFlow inference shows loading spinners (wasm not wired for web)
+- File save/export uses web download fallback (no device filesystem)
+- Camera (QR scanner) requires HTTPS + browser permissions
 
 ## Metro Bundler (for device/emulator)
 

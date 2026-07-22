@@ -120,6 +120,9 @@ module.exports = {
         'node_modules/react-native-svg/src/ReactNativeSVG.web.ts'
       ),
 
+      // ── expo-modules-core → web shim (ships only TS source babel can't parse) ──
+      'expo-modules-core': path.join(projectRoot, 'shims/expo-modules-core'),
+
       // ── react-native-view-shot → no-op stub on web ────────────────────────
       'react-native-view-shot': path.join(
         projectRoot,
@@ -234,6 +237,7 @@ module.exports = {
     new webpack.DefinePlugin({
       __DEV__:               JSON.stringify(true),
       'process.env.NODE_ENV': JSON.stringify('development'),
+      'process.env':          JSON.stringify({ NODE_ENV: 'development' }),
       // Prevent "global is not defined" in packages that reference it directly
       global:                'globalThis',
     }),

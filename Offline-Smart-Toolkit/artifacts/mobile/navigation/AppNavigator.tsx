@@ -4,7 +4,9 @@
  * This replaces expo-router's file-based routing.
  */
 import React from 'react';
+import { View } from 'react-native';
 import { createStackNavigator } from '@react-navigation/stack';
+import { AppDrawer } from '@/components/AppDrawer';
 
 // ── Main / Tabs ────────────────────────────────────────────────────────────
 import Dashboard      from '@/app/(tabs)/dashboard';
@@ -148,6 +150,7 @@ const Stack = createStackNavigator();
 
 export function AppNavigator() {
   return (
+    <View style={{ flex: 1 }}>
     <Stack.Navigator
       initialRouteName="Dashboard"
       screenOptions={{ headerShown: false, animation: 'slide_from_right' }}
@@ -289,5 +292,9 @@ export function AppNavigator() {
       <Stack.Screen name="UtilityCalendar"      component={UtilityCalendar} />
       <Stack.Screen name="UtilityPercentageCalc" component={UtilityPercentageCalc} />
     </Stack.Navigator>
+    {/* AppDrawer is an absolute overlay — must live inside NavigationContainer
+        so its useRouter() / usePathname() hooks work correctly */}
+    <AppDrawer />
+    </View>
   );
 }
