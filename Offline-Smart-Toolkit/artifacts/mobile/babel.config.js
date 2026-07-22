@@ -12,7 +12,7 @@ module.exports = {
         },
       },
     ],
-    // Reanimated must be last
-    'react-native-reanimated/plugin',
+    // Reanimated must be last — use explicit local path to avoid pnpm virtual store resolving wrong version
+    require.resolve('./node_modules/react-native-reanimated/plugin'),
   ],
 };

@@ -2,7 +2,9 @@
   "compilerOptions": {
     "target": "ESNext",
     "module": "commonjs",
-    "lib": ["ESNext"],
+    "lib": [
+      "ESNext"
+    ],
     "jsx": "react-native",
     "strict": true,
     "moduleResolution": "bundler",
@@ -12,7 +14,9 @@
     "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": [
+        "./*"
+      ]
     }
   },
   "include": [
@@ -26,5 +30,6 @@
     "android",
     "ios",
     "dist"
-  ]
+  ],
+  "extends": "expo/tsconfig.base"
 }

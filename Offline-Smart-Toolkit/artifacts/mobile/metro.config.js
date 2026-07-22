@@ -1,7 +1,7 @@
 /**
- * Metro configuration for React Native CLI (migrated from Expo).
+ * Metro configuration for React Native / Expo (bare workflow).
  * Provides:
- *  - Monorepo watchFolders support
+ *  - Monorepo watchFolders + nodeModulesPaths support
  *  - Shim redirection for expo-* packages → /shims/
  *  - pdf-lib CJS fix
  *  - ONNX / WASM asset extensions

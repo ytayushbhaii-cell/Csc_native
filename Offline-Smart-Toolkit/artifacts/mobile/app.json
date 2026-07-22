@@ -43,7 +43,6 @@
     },
     "plugins": [
       "onnxruntime-react-native",
-      "expo-router",
       "expo-font",
       [
         "expo-splash-screen",
@@ -77,9 +76,7 @@
         }
       ]
     ],
-    "experiments": {
-      "typedRoutes": true
-    },
+    "experiments": {},
     "extra": {
       "router": {},
       "eas": {
