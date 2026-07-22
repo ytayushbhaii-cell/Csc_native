@@ -7,7 +7,8 @@ let _pdfjsLib: any = null;
 async function getPdfJs() {
   if (_pdfjsLib) return _pdfjsLib;
   // Dynamic import prevents Metro from bundling this for native builds
-  const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf' as any);
+  // pdfjs-dist v6 ships ESM only — the entry is build/pdf.mjs (no .js wrapper)
+  const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs' as any);
   // Force main-thread execution (no separate worker process needed)
   pdfjsLib.GlobalWorkerOptions.workerSrc = '';
   _pdfjsLib = pdfjsLib;

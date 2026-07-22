@@ -5,13 +5,17 @@
  * in the Replit preview pane. react-native APIs are handled by react-native-web.
  * Expo APIs are either shimmed (expo-router) or use their own web implementations.
  */
-const path             = require('path');
+const path              = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const webpack           = require('webpack');
 
 const projectRoot = __dirname; // Offline-Smart-Toolkit/artifacts/mobile/
 
 // ── Packages that ship ESM / TS and must be compiled by babel-loader ─────────
-const TRANSFORM_PACKAGES = [
+// NOTE: With pnpm the physical path is node_modules/.pnpm/<pkg>@ver/node_modules/<pkg>/...
+// A simple "starts-with" regex on the first node_modules segment doesn't work.
+// We use a function that checks every node_modules/<pkg>/ segment in the path.
+const TRANSFORM_PACKAGES_LIST = [
   'react-native',
   'react-native-reanimated',
   'react-native-gesture-handler',
@@ -22,10 +26,13 @@ const TRANSFORM_PACKAGES = [
   'react-native-linear-gradient',
   'react-native-haptic-feedback',
   'react-native-share',
+  'react-native-vector-icons',
   '@react-navigation',
   '@react-native-async-storage',
   '@react-native-clipboard',
   '@react-native-community',
+  // Expo packages that ship TypeScript source or ESM that needs transpilation
+  'expo',
   'expo-modules-core',
   'expo-file-system',
   'expo-image-picker',
@@ -46,11 +53,24 @@ const TRANSFORM_PACKAGES = [
   '@expo/vector-icons',
   '@expo-google-fonts',
   '@unimodules',
-].join('|');
+];
 
-const transformExclude = new RegExp(
-  `node_modules[\\\\/](?!(${TRANSFORM_PACKAGES})[\\\\/])`
-);
+/**
+ * Returns true (exclude) when a file is in node_modules AND is NOT one of the
+ * packages above.  Works with pnpm's virtual-store layout where paths look like:
+ *   …/node_modules/.pnpm/react-native@0.81.5/node_modules/react-native/…
+ */
+function transformExclude(filepath) {
+  if (!filepath.includes('node_modules')) return false; // project source → always transform
+  // Check every node_modules/<segment> in the path
+  for (const pkg of TRANSFORM_PACKAGES_LIST) {
+    // Handles both scoped (@react-navigation/…) and unscoped (react-native/…)
+    if (filepath.includes(`/node_modules/${pkg}/`) || filepath.includes(`\\node_modules\\${pkg}\\`)) {
+      return false; // in an allowed package → transform
+    }
+  }
+  return true; // in an unrecognised node_modules package → skip
+}
 
 module.exports = {
   mode: 'development',
@@ -79,6 +99,21 @@ module.exports = {
       // ── expo-router MUST use shim (app uses React Navigation) ─────────────
       'expo-router': path.join(projectRoot, 'shims/expo-router'),
 
+      // ── All other expo packages → shims (Metro handles these via resolveRequest;
+      //    webpack needs explicit aliases for each one) ───────────────────────
+      'expo-linear-gradient': path.join(projectRoot, 'shims/expo-linear-gradient'),
+      'expo-status-bar':      path.join(projectRoot, 'shims/expo-status-bar'),
+      '@expo/vector-icons':   path.join(projectRoot, 'shims/expo-vector-icons'),
+      'expo-constants':       path.join(projectRoot, 'shims/expo-constants'),
+      'expo-font':            path.join(projectRoot, 'shims/expo-font'),
+      'expo-clipboard':       path.join(projectRoot, 'shims/expo-clipboard'),
+      'expo-haptics':         path.join(projectRoot, 'shims/expo-haptics'),
+      'expo-linking':         path.join(projectRoot, 'shims/expo-linking'),
+      'expo-splash-screen':   path.join(projectRoot, 'shims/expo-splash-screen'),
+      // These packages use expo-modules-core native bindings; replace with web stubs
+      'expo-image-picker':    path.join(projectRoot, 'shims/expo-image-picker'),
+      // expo-blur ships its own web implementation — no shim needed
+
       // ── react-native-svg → web build (avoids native bridge code) ──────────
       'react-native-svg': path.join(
         projectRoot,
@@ -102,6 +137,15 @@ module.exports = {
   // ── Loaders ────────────────────────────────────────────────────────────────
   module: {
     rules: [
+      // ── ESM "fully specified" fix ─────────────────────────────────────────
+      // @react-navigation, @react-native-async-storage etc. ship .mjs files
+      // that use relative imports without extensions. webpack 5 strict ESM
+      // mode requires fully-specified paths; this rule relaxes it.
+      {
+        test: /\.m?js$/,
+        resolve: { fullySpecified: false },
+      },
+
       // ── JavaScript / TypeScript / JSX / TSX ───────────────────────────────
       {
         test: /\.(tsx?|jsx?)$/,
@@ -110,12 +154,17 @@ module.exports = {
           loader: 'babel-loader',
           options: {
             cacheDirectory: true,
-            // Babel 7.13+ assumptions — resolve the "loose mode must match"
-            // conflict that arises between preset-env and reanimated/plugin.
+            // IMPORTANT: disable project-level babel.config.js (Metro preset)
+            // so it doesn't conflict with the web-specific config below.
+            configFile: false,
+            babelrc:    false,
+            // Babel 7.13+ assumptions — must all agree across every plugin.
+            // privateFieldsAsSymbols:true is what @babel/helper-create-class-features
+            // expects when loose:true was set by other plugins.
             assumptions: {
-              setPublicClassFields:       true,
-              privateFieldsAsProperties:  true,
-              privateFieldsAsSymbols:     false,
+              setPublicClassFields:      true,
+              privateFieldsAsProperties: true,
+              privateFieldsAsSymbols:    true,
             },
             presets: [
               // Target modern Chrome for the web preview
@@ -126,8 +175,10 @@ module.exports = {
               }],
               // React JSX (automatic runtime — no need to import React)
               ['@babel/preset-react', { runtime: 'automatic' }],
-              // TypeScript (v8+ — no allExtensions/isTSX options)
-              '@babel/preset-typescript',
+              // TypeScript — allExtensions:true so babel strips TS syntax from
+              // .js files too (e.g. react-native-linear-gradient/index.windows.js
+              // uses `import type` in a plain .js file).
+              ['@babel/preset-typescript', { allExtensions: true, isTSX: true }],
             ],
             plugins: [
               // @/ alias — same mapping as Metro config
@@ -176,6 +227,15 @@ module.exports = {
     new HtmlWebpackPlugin({
       template: path.join(projectRoot, 'public/index.html'),
       title:    'CSC Smart Toolkit',
+    }),
+
+    // ── React Native globals ────────────────────────────────────────────────
+    // RN source code uses __DEV__, process.env.NODE_ENV, etc. without importing them.
+    new webpack.DefinePlugin({
+      __DEV__:               JSON.stringify(true),
+      'process.env.NODE_ENV': JSON.stringify('development'),
+      // Prevent "global is not defined" in packages that reference it directly
+      global:                'globalThis',
     }),
   ],
 
