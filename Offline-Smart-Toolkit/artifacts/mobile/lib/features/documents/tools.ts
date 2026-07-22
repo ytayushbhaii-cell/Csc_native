@@ -89,6 +89,7 @@ export const PDF_TOOLS: DocToolMeta[] = [
   { id: 'pdf-info',              name: 'PDF Information',     nameHi: 'PDF जानकारी',        iconName: 'information-outline',       color: PDF_COLOR, description: 'View metadata, pages, size and properties',           descHi: 'मेटाडेटा, पेज, साइज़ और प्रॉपर्टी देखें',           route: '/document-tools/pdf/info',             category: 'pdf' },
   { id: 'pdf-document-scanner',  name: 'Document Scanner',    nameHi: 'दस्तावेज़ स्कैनर',  iconName: 'scan-helper',               color: PDF_COLOR, description: 'Scan and enhance documents, export as PDF',            descHi: 'दस्तावेज़ स्कैन और एन्हांस करें, PDF में निर्यात करें', route: '/document-tools/pdf/document-scanner', category: 'pdf' },
   { id: 'pdf-image-to-text',     name: 'Image to Text',       nameHi: 'इमेज से टेक्स्ट',   iconName: 'text-recognition',          color: PDF_COLOR, description: 'Extract text from images using offline OCR',           descHi: 'ऑफलाइन OCR से इमेज से टेक्स्ट निकालें',             route: '/document-tools/pdf/image-to-text',    category: 'pdf' },
+  { id: 'pdf-preview',           name: 'PDF Preview',         nameHi: 'PDF पूर्वावलोकन',    iconName: 'file-eye-outline',          color: PDF_COLOR, description: 'View all pages of a PDF document offline',             descHi: 'PDF दस्तावेज़ के सभी पेज ऑफलाइन देखें',              route: '/document-tools/pdf/preview',          category: 'pdf' },
 ];
 
 // ── All document tools flat list ──────────────────────────────────────────────

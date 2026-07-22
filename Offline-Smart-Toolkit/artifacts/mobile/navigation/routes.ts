@@ -110,6 +110,7 @@ export const ROUTE_TO_SCREEN: Record<string, string> = {
   '/document-tools/pdf/to-image':                   'PdfToImage',
   '/document-tools/pdf/document-scanner':           'PdfDocumentScanner',
   '/document-tools/pdf/image-to-text':              'PdfImageToText',
+  '/document-tools/pdf/preview':                    'PdfPreview',
 
   // ── Government & CSC Document Tools ───────────────────────────────────────
   '/document-tools/gov-docs':                       'GovDocTools',

@@ -219,7 +219,7 @@ export default function ImageToTextScreen() {
                 color: ocrResult.engine === 'tesseract' ? '#22C55E' : '#F59E0B',
                 fontFamily: 'Inter_600SemiBold',
               }]}>
-                {ocrResult.engine === 'tesseract' ? 'Tesseract OCR' : 'Architecture Stub'}
+                {ocrResult.engine === 'tesseract' ? 'Tesseract OCR' : ocrResult.engine === 'mlkit' ? 'ML Kit OCR' : 'Stub'}
               </Text>
             </View>
             {ocrResult.confidence > 0 && (

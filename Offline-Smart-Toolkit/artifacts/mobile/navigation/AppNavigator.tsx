@@ -110,6 +110,7 @@ import PdfSplit            from '@/app/document-tools/pdf/split';
 import PdfToImage          from '@/app/document-tools/pdf/to-image';
 import PdfDocumentScanner  from '@/app/document-tools/pdf/document-scanner';
 import PdfImageToText      from '@/app/document-tools/pdf/image-to-text';
+import PdfPreview          from '@/app/document-tools/pdf/preview';
 // Government & CSC Document Tools
 import GovDocTools         from '@/app/document-tools/gov-docs/index';
 import CscUtilityTools     from '@/app/document-tools/csc-utility/index';
@@ -265,6 +266,7 @@ export function AppNavigator() {
       <Stack.Screen name="PdfToImage"            component={PdfToImage} />
       <Stack.Screen name="PdfDocumentScanner"    component={PdfDocumentScanner} />
       <Stack.Screen name="PdfImageToText"        component={PdfImageToText} />
+      <Stack.Screen name="PdfPreview"            component={PdfPreview} />
       {/* Government & CSC Document Tools */}
       <Stack.Screen name="GovDocTools"           component={GovDocTools} />
       <Stack.Screen name="CscUtilityTools"       component={CscUtilityTools} />

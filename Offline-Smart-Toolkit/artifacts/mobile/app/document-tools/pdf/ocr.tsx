@@ -108,10 +108,10 @@ export default function OcrScreen() {
         <View style={styles.section}>
           {/* Engine + confidence badges */}
           <View style={styles.badgeRow}>
-            <View style={[styles.badge, { backgroundColor: ocrResult.engine === 'tesseract' ? '#22C55E' + '20' : '#F59E0B' + '20', borderRadius: 20 }]}>
-              <MaterialCommunityIcons name="cog-outline" size={12} color={ocrResult.engine === 'tesseract' ? '#22C55E' : '#F59E0B'} />
-              <Text style={[styles.badgeText, { color: ocrResult.engine === 'tesseract' ? '#22C55E' : '#F59E0B', fontFamily: 'Inter_600SemiBold' }]}>
-                {ocrResult.engine === 'tesseract' ? 'Tesseract' : 'Architecture Stub'}
+            <View style={[styles.badge, { backgroundColor: ocrResult.engine === 'stub' ? '#F59E0B' + '20' : '#22C55E' + '20', borderRadius: 20 }]}>
+              <MaterialCommunityIcons name="cog-outline" size={12} color={ocrResult.engine === 'stub' ? '#F59E0B' : '#22C55E'} />
+              <Text style={[styles.badgeText, { color: ocrResult.engine === 'stub' ? '#F59E0B' : '#22C55E', fontFamily: 'Inter_600SemiBold' }]}>
+                {ocrResult.engine === 'tesseract' ? 'Tesseract OCR' : ocrResult.engine === 'mlkit' ? 'ML Kit OCR' : 'Stub'}
               </Text>
             </View>
             {ocrResult.confidence > 0 && (
@@ -179,12 +179,14 @@ export default function OcrScreen() {
             </Text>
           </TouchableOpacity>
 
-          <View style={[styles.infoBox, { backgroundColor: COLOR + '12', borderColor: COLOR + '30', borderRadius: colors.radius }]}>
-            <MaterialCommunityIcons name="information-outline" size={15} color={COLOR} />
-            <Text style={[styles.infoText, { color: colors.foreground, fontFamily: 'Inter_400Regular' }]}>
-              On web: install tesseract.js for full OCR. On native: react-native-tesseract-ocr required.
-            </Text>
-          </View>
+          {ocrResult.engine === 'stub' && (
+            <View style={[styles.infoBox, { backgroundColor: '#F59E0B' + '12', borderColor: '#F59E0B' + '30', borderRadius: colors.radius }]}>
+              <MaterialCommunityIcons name="information-outline" size={15} color="#F59E0B" />
+              <Text style={[styles.infoText, { color: colors.foreground, fontFamily: 'Inter_400Regular' }]}>
+                OCR unavailable. Web uses Tesseract.js; Android uses ML Kit (requires native build).
+              </Text>
+            </View>
+          )}
         </View>
       )}
     </ToolScreenLayout>

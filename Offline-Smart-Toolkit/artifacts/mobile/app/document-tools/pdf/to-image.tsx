@@ -73,18 +73,27 @@ export default function PdfToImageScreen() {
     }
   };
 
-  const downloadImage = (img: PdfToImageResult) => {
+  const downloadImage = async (img: PdfToImageResult) => {
     if (Platform.OS === 'web') {
       const a = document.createElement('a');
       a.href = img.uri;
       a.download = `page-${img.pageNumber}.${format}`;
       a.click();
+    } else {
+      try {
+        const Sharing = await import('expo-sharing');
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(img.uri);
+        }
+      } catch {
+        // Sharing unavailable
+      }
     }
   };
 
   const downloadAll = () => {
     results.forEach((img) => {
-      setTimeout(() => downloadImage(img), (img.pageNumber - 1) * 120);
+      setTimeout(() => downloadImage(img), (img.pageNumber - 1) * 200);
     });
   };
 
@@ -181,22 +190,13 @@ export default function PdfToImageScreen() {
             </View>
           </View>
 
-          {Platform.OS !== 'web' && (
-            <View style={[styles.archBox, { backgroundColor: '#F59E0B' + '14', borderColor: '#F59E0B' + '40', borderRadius: colors.radius }]}>
-              <MaterialCommunityIcons name="information-outline" size={15} color="#F59E0B" />
-              <Text style={[styles.infoText, { color: colors.foreground, fontFamily: 'Inter_400Regular' }]}>
-                PDF to Image conversion is available on the web preview. On native, use a PDF viewer app.
-              </Text>
-            </View>
-          )}
-
           <TouchableOpacity
             style={[styles.btn, {
-              backgroundColor: Platform.OS !== 'web' ? colors.muted : COLOR,
+              backgroundColor: COLOR,
               borderRadius: colors.radius - 2,
             }]}
             onPress={process}
-            disabled={processing || Platform.OS !== 'web'}
+            disabled={processing}
             activeOpacity={0.85}
           >
             {processing ? (
@@ -222,18 +222,16 @@ export default function PdfToImageScreen() {
           </View>
 
           {/* Download All */}
-          {Platform.OS === 'web' && (
-            <TouchableOpacity
-              style={[styles.btn, { backgroundColor: COLOR, borderRadius: colors.radius - 2 }]}
-              onPress={downloadAll}
-              activeOpacity={0.85}
-            >
-              <MaterialCommunityIcons name="download-multiple" size={18} color="#fff" />
-              <Text style={[styles.btnText, { color: '#fff', fontFamily: 'Inter_600SemiBold' }]}>
-                Download All ({results.length})
-              </Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            style={[styles.btn, { backgroundColor: COLOR, borderRadius: colors.radius - 2 }]}
+            onPress={downloadAll}
+            activeOpacity={0.85}
+          >
+            <MaterialCommunityIcons name="download-multiple" size={18} color="#fff" />
+            <Text style={[styles.btnText, { color: '#fff', fontFamily: 'Inter_600SemiBold' }]}>
+              {Platform.OS === 'web' ? `Download All (${results.length})` : `Share All (${results.length})`}
+            </Text>
+          </TouchableOpacity>
 
           {/* Image previews */}
           {results.map((img) => (
@@ -253,18 +251,16 @@ export default function PdfToImageScreen() {
                     {img.width} × {img.height}
                   </Text>
                 </View>
-                {Platform.OS === 'web' && (
-                  <TouchableOpacity
-                    style={[styles.dlBtn, { backgroundColor: COLOR, borderRadius: colors.radius - 6 }]}
-                    onPress={() => downloadImage(img)}
-                    activeOpacity={0.85}
-                  >
-                    <MaterialCommunityIcons name="download" size={14} color="#fff" />
-                    <Text style={[styles.dlBtnText, { color: '#fff', fontFamily: 'Inter_600SemiBold' }]}>
-                      Download
-                    </Text>
-                  </TouchableOpacity>
-                )}
+                <TouchableOpacity
+                  style={[styles.dlBtn, { backgroundColor: COLOR, borderRadius: colors.radius - 6 }]}
+                  onPress={() => downloadImage(img)}
+                  activeOpacity={0.85}
+                >
+                  <MaterialCommunityIcons name={Platform.OS === 'web' ? 'download' : 'share-outline'} size={14} color="#fff" />
+                  <Text style={[styles.dlBtnText, { color: '#fff', fontFamily: 'Inter_600SemiBold' }]}>
+                    {Platform.OS === 'web' ? 'Download' : 'Share'}
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
           ))}

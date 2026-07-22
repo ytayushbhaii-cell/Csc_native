@@ -152,9 +152,49 @@ Key files: `lib/ai/services/onnxBackend.ts`, `lib/ai/services/SegmentationServic
 - `pdf-lib` — PDF creation/manipulation (CJS build forced via metro config)
 - `tesseract.js` — OCR (web only, dynamically imported)
 - `pdfjs-dist` — PDF rendering to images (web only, legacy build)
+- `@react-native-ml-kit/text-recognition` — Offline OCR on native Android (Google ML Kit, no API key)
+- `react-native-pdf-thumbnail` — PDF page rendering to images on native Android (uses Android PdfRenderer)
 - `expo-document-picker` — Pick PDF files
 - `expo-clipboard` — Copy OCR text to clipboard
 - `expo-image-manipulator` — Crop/resize/compress images
+
+## Phase 4 — Document Tools, PDF Tools & OCR (completed)
+
+### OCR System
+- **Web**: Tesseract.js v7 (dynamic import) — `lib/features/documents/ocr/ocrService.ts`
+- **Native Android**: Google ML Kit text recognition — `lib/features/documents/ocr/ocrService.native.ts`
+  - Auto-downloaded ML Kit model, works 100% offline after first build
+  - Supports Latin (English), Devanagari (Hindi), Chinese, Japanese, Korean
+
+### PDF to Image
+- **Web**: pdfjs-dist (canvas rendering) — `lib/features/documents/pdf/pdfToImageService.web.ts`
+- **Native Android**: react-native-pdf-thumbnail (Android PdfRenderer) — `lib/features/documents/pdf/pdfToImageService.native.ts`
+  - Metro platform extension selects correct implementation at build time
+
+### PDF Tools Status
+| Tool | Status | Notes |
+|------|--------|-------|
+| Merge PDF | ✅ | pdf-lib, web + native |
+| Split PDF | ✅ | pdf-lib, web + native |
+| Compress PDF | ✅ | pdf-lib, web + native |
+| Rotate PDF | ✅ | pdf-lib, web + native |
+| PDF to Image | ✅ | pdfjs (web) + pdf-thumbnail (native) |
+| Image to PDF | ✅ | pdf-lib, web + native |
+| PDF Preview | ✅ | New screen — renders pages as images |
+| Offline OCR | ✅ | Tesseract (web) + ML Kit (native) |
+| Search PDF | ✅ | OCR-based full-text search, native unlocked |
+| Image to Text | ✅ | Tesseract (web) + ML Kit (native) |
+| Document Scanner | ✅ | Camera capture → PDF |
+| PDF Info | ✅ | Metadata viewer |
+| Delete Pages | ✅ | pdf-lib |
+| Extract Pages | ✅ | pdf-lib |
+| Password Protect | ✅ | pdf-lib |
+| Remove Password | ✅ | pdf-lib |
+| Rearrange Pages | ✅ | pdf-lib |
+| Multiple Image to PDF | ✅ | `pdf/from-image.tsx` multi-select |
+
+### Document Tools Status
+All Aadhaar, PAN, Voter ID, Driving License, Passport, Gov Docs, and CSC Utility hubs: ✅ Complete
 
 ## User Preferences
 - 100% offline — no API, no cloud, no Firebase, no internet

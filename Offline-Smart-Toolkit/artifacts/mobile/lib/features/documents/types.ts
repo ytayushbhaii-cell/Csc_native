@@ -69,7 +69,7 @@ export interface PrintSheetResult {
 export interface OcrResult {
   text: string;
   confidence: number;
-  engine: 'tesseract' | 'stub';
+  engine: 'tesseract' | 'mlkit' | 'stub';
 }
 
 export interface PdfInfo {

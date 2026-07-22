@@ -93,7 +93,7 @@ export default function SearchPdfScreen() {
         const imgs = await pdfPageToImages(file.uri, undefined, 'jpeg', 1.5);
 
         if (imgs[0]?.isStub) {
-          setError('Search PDF requires web preview (OCR + PDF rendering).');
+          setError(imgs[0].stubMessage ?? 'PDF rendering failed. Please try again.');
           setProcessing(false);
           return;
         }
@@ -167,14 +167,6 @@ export default function SearchPdfScreen() {
         </View>
       )}
 
-      {Platform.OS !== 'web' && file && (
-        <View style={[styles.infoBox, { backgroundColor: '#F59E0B' + '14', borderColor: '#F59E0B' + '40', borderRadius: colors.radius }]}>
-          <MaterialCommunityIcons name="information-outline" size={15} color="#F59E0B" />
-          <Text style={[styles.infoText, { color: colors.foreground, fontFamily: 'Inter_400Regular' }]}>
-            Search PDF uses OCR and requires the web preview.
-          </Text>
-        </View>
-      )}
 
       {file && (
         <View style={styles.section}>
@@ -208,11 +200,11 @@ export default function SearchPdfScreen() {
 
           <TouchableOpacity
             style={[styles.btn, {
-              backgroundColor: !query.trim() || processing || Platform.OS !== 'web' ? colors.muted : COLOR,
+              backgroundColor: !query.trim() || processing ? colors.muted : COLOR,
               borderRadius: colors.radius - 2,
             }]}
             onPress={hasCachedOcr ? searchCached : runSearch}
-            disabled={!query.trim() || processing || Platform.OS !== 'web'}
+            disabled={!query.trim() || processing}
             activeOpacity={0.85}
           >
             {processing ? (
