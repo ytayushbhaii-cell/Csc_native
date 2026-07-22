@@ -26,7 +26,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd Offline-Smart-Toolkit/artifacts/mobile && PORT=5000 node server/dev-server.js"
+args = "cd Offline-Smart-Toolkit/artifacts/mobile && npx webpack serve --config webpack.config.js"
 waitForPort = 5000
 
 [[ports]]
