@@ -74,6 +74,8 @@ export const ROUTE_TO_SCREEN: Record<string, string> = {
   '/document-tools/voter':                          'DocumentVoter',
   '/document-tools/voter/copies':                   'VoterCopies',
   '/document-tools/voter/crop':                     'VoterCrop',
+  '/document-tools/voter/front-crop':              'VoterFrontCrop',
+  '/document-tools/voter/back-crop':               'VoterBackCrop',
   '/document-tools/voter/detect':                   'VoterDetect',
   '/document-tools/voter/print-layout':             'VoterPrintLayout',
 
@@ -111,7 +113,7 @@ export const ROUTE_TO_SCREEN: Record<string, string> = {
   '/qr-tools/scanner':    'QrScanner',
 
   // ── Barcode Tools ─────────────────────────────────────────────────────────
-  '/barcode-tools':             'BarcodeTools',
+  '/barcode-tools':             'QrTools',
   '/barcode-tools/generator':   'BarcodeGenerator',
   '/barcode-tools/scanner':     'BarcodeScanner',
 

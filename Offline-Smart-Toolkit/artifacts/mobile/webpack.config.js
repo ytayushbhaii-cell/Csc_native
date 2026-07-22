@@ -110,6 +110,9 @@ module.exports = {
       'expo-haptics':         path.join(projectRoot, 'shims/expo-haptics'),
       'expo-linking':         path.join(projectRoot, 'shims/expo-linking'),
       'expo-splash-screen':   path.join(projectRoot, 'shims/expo-splash-screen'),
+      // expo-file-system/legacy — legacy sub-path with cacheDirectory/documentDirectory constants
+      // needed by signature bg-remove; stubs them to null on web (file I/O only runs on native)
+      'expo-file-system/legacy': path.join(projectRoot, 'shims/expo-file-system-legacy'),
       // These packages use expo-modules-core native bindings; replace with web stubs
       'expo-image-picker':    path.join(projectRoot, 'shims/expo-image-picker'),
       // expo-blur ships its own web implementation — no shim needed

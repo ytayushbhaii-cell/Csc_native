@@ -186,7 +186,15 @@ export default function SettingsScreen() {
             icon="shield-check-outline"
             iconColor="#10B981"
             label={t('settings.privacyPolicy')}
-            onPress={() => {}}
+            onPress={() => {
+              import('react-native').then(({ Alert }) =>
+                Alert.alert(
+                  t('settings.privacyPolicy'),
+                  'CSC Smart Toolkit operates 100% offline. No personal data, photos, or documents are ever collected, transmitted, or stored on any server. All processing happens entirely on your device.',
+                  [{ text: 'OK' }]
+                )
+              );
+            }}
             value={t('settings.noData')}
           />
           <SettingRow

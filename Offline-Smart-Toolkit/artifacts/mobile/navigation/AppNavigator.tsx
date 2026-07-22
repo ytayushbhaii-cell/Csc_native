@@ -75,6 +75,8 @@ import PanSizeDetection    from '@/app/document-tools/pan/size-detection';
 import DocumentVoter       from '@/app/document-tools/voter/index';
 import VoterCopies         from '@/app/document-tools/voter/copies';
 import VoterCrop           from '@/app/document-tools/voter/crop';
+import VoterFrontCrop      from '@/app/document-tools/voter/front-crop';
+import VoterBackCrop       from '@/app/document-tools/voter/back-crop';
 import VoterDetect         from '@/app/document-tools/voter/detect';
 import VoterPrintLayout    from '@/app/document-tools/voter/print-layout';
 // Driving License
@@ -222,6 +224,8 @@ export function AppNavigator() {
       <Stack.Screen name="DocumentVoter"         component={DocumentVoter} />
       <Stack.Screen name="VoterCopies"           component={VoterCopies} />
       <Stack.Screen name="VoterCrop"             component={VoterCrop} />
+      <Stack.Screen name="VoterFrontCrop"        component={VoterFrontCrop} />
+      <Stack.Screen name="VoterBackCrop"         component={VoterBackCrop} />
       <Stack.Screen name="VoterDetect"           component={VoterDetect} />
       <Stack.Screen name="VoterPrintLayout"      component={VoterPrintLayout} />
       {/* Driving License */}
@@ -259,7 +263,6 @@ export function AppNavigator() {
       <Stack.Screen name="QrScanner"   component={QrScanner} />
 
       {/* ── Barcode Tools ────────────────────────────────────────── */}
-      <Stack.Screen name="BarcodeTools"     component={BarcodeGenerator} />
       <Stack.Screen name="BarcodeGenerator" component={BarcodeGenerator} />
       <Stack.Screen name="BarcodeScanner"   component={BarcodeScanner} />
 

@@ -78,9 +78,13 @@ function resolveModelUrl(envKey: string, publicDefault: string, relativeFallback
   // 1. Env var (works on all platforms — set before EAS build)
   const fromEnv = env(envKey);
   if (fromEnv) return fromEnv;
-  // 2. Known public default (absolute HTTPS)
+  // 2. On web: use relative path — files are served from public/models/ by webpack.
+  //    Never use publicDefault on web: external URLs often have CORS restrictions or
+  //    change paths (404), whereas the bundled local file always works.
+  if (Platform.OS === 'web') return relativeFallback;
+  // 3. On native: use known public HTTPS URL (relative paths have no server to resolve them).
   if (publicDefault) return publicDefault;
-  // 3. Relative path — web preview only; useless on Android/iOS
+  // 4. Last resort relative path (only useful if a dev server is somehow running)
   return relativeFallback;
 }
 

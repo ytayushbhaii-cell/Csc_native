@@ -3,11 +3,15 @@
 ## Overview
 A 100% offline, Expo/React Native mobile application for CSC (Common Service Centre) operators, Cyber Cafes, and Photo Studios. All document processing runs on-device — no internet, no cloud, no API calls.
 
-## How to Run
+## How to Run (Web Preview)
 ```
-cd Offline-Smart-Toolkit/artifacts/mobile && PORT=5000 EXPO_PUBLIC_PORT=5000 pnpm exec expo start --web --port 5000
+cd Offline-Smart-Toolkit/artifacts/mobile && npx webpack serve --config webpack.config.js
 ```
-The workflow "Start application" handles this. The app runs at http://localhost:5000 (Expo web).
+The workflow "Start application" handles this. The app runs at http://localhost:5000 via react-native-web.
+
+> **Note**: This project was migrated from Expo Router to React Native CLI + webpack (Phase 1).
+> Navigation is handled by `navigation/AppNavigator.tsx` (React Navigation stack), with an
+> expo-router shim in `shims/expo-router.tsx` so existing screen files need no changes.
 
 ## Workflow: Expo Prebuild (Bare Workflow) — Android
 
