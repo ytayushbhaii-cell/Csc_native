@@ -14,7 +14,8 @@ export const KEYS = {
 } as const;
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-export type ThemeValue        = 'light' | 'dark';
+// ThemeValue now accepts any theme ID string (light, dark, forest, sunset, ocean, purple, …)
+export type ThemeValue        = string;
 export type LanguageValue     = 'en' | 'hi';
 export type PrintSizeValue    = 'a4' | 'letter' | 'legal' | 'passport';
 export type DefaultFolderValue = 'downloads' | 'pictures' | 'documents';

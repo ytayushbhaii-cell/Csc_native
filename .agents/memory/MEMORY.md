@@ -11,3 +11,4 @@
 - [ortLoader platform extension TS stub](ortloader-ts-stub.md) — ortLoader.web.ts / .native.ts exist but tsc can't resolve platform extensions; create ortLoader.ts base stub with same signature.
 - [expo-file-system dynamic import typing](expo-fs-dynamic-import.md) — dynamic `await import('expo-file-system')` returns module namespace; cast as any to access cacheDirectory/writeAsStringAsync.
 - [BEN2 bg-removal architecture](ben2-bg-removal-arch.md) — Four-service AI upgrade: DeviceCapability + ImagePreprocessor + ImageRouter + BEN2Backend; BEN2 model files still needed at public/models/ben2.onnx.
+- [Multi-theme system](multi-theme-system.md) — themeId string replaces isDark bool; ThemeContext exposes setThemeById; useColors returns per-theme palette.
