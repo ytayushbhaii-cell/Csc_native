@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  FileProvider path configuration for CSC Smart Toolkit.
+  Required for sharing files via Intent on Android 7+ (API 24+).
+  Referenced by the <provider> entry in AndroidManifest.xml.
+-->
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- App-private internal storage: context.filesDir -->
+  <files-path
+    name="internal_files"
+    path="." />
+
+  <!-- App cache directory: context.cacheDir -->
+  <cache-path
+    name="cache"
+    path="." />
+
+  <!-- External app-specific files: context.getExternalFilesDir(null) -->
+  <external-files-path
+    name="external_files"
+    path="." />
+
+  <!-- External app-specific cache -->
+  <external-cache-path
+    name="external_cache"
+    path="." />
+
+  <!-- Public Downloads directory (used for PDF/image exports) -->
+  <external-path
+    name="downloads"
+    path="Download/" />
+
+  <!-- Public Pictures directory (used for photo exports) -->
+  <external-path
+    name="pictures"
+    path="Pictures/" />
+
+  <!-- Public Documents directory -->
+  <external-path
+    name="documents"
+    path="Documents/" />
+</paths>

@@ -6,9 +6,12 @@
   "scripts": {
     "start": "react-native start",
     "android": "react-native run-android",
+    "build:apk:debug": "cd android && ./gradlew assembleDebug",
     "build:apk": "cd android && ./gradlew assembleRelease",
     "build:aab": "cd android && ./gradlew bundleRelease",
-    "build:web": "webpack --config webpack.config.js --mode production"
+    "build:all": "bash build-android.sh all",
+    "build:web": "webpack --config webpack.config.js --mode production",
+    "clean:android": "cd android && ./gradlew clean"
   },
   "dependencies": {
     "@babel/core": "^7.25.2",

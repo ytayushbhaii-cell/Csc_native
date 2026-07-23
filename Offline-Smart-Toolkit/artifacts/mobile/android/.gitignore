@@ -1,9 +1,7 @@
 # OSX
-#
 .DS_Store
 
 # Android/IntelliJ
-#
 build/
 .idea
 .gradle
@@ -14,3 +12,9 @@ local.properties
 
 # Bundle artifacts
 *.jsbundle
+
+# ── Release signing ─────────────────────────────────────────────────────────
+# IMPORTANT: key.properties and release.keystore contain production credentials.
+# Never commit these to source control. Back them up securely elsewhere.
+key.properties
+app/release.keystore

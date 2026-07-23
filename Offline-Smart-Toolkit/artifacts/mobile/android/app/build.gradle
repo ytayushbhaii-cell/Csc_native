@@ -13,22 +13,32 @@ react {
     codegenDir = new File(["node", "--print", "require.resolve('@react-native/codegen/package.json', { paths: [require.resolve('react-native/package.json')] })"].execute(null, rootDir).text.trim()).getParentFile().getAbsoluteFile()
 }
 
-def enableMinifyInReleaseBuilds = (findProperty('android.enableMinifyInReleaseBuilds') ?: 'false').toBoolean()
+// ── Release signing from key.properties ─────────────────────────────────────
+def keystorePropertiesFile = rootProject.file("key.properties")
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
 
 android {
-    ndkVersion rootProject.ext.ndkVersion ?: "27.1.12297006"
-    compileSdk rootProject.ext.compileSdkVersion ?: 35
-    buildToolsVersion rootProject.ext.buildToolsVersion ?: "35.0.0"
+    ndkVersion rootProject.ext.ndkVersion
+    compileSdk rootProject.ext.compileSdkVersion
+    buildToolsVersion rootProject.ext.buildToolsVersion
 
     namespace "com.cscsmarttoolkit.app"
 
     defaultConfig {
         applicationId "com.cscsmarttoolkit.app"
-        minSdk rootProject.ext.minSdkVersion ?: 24
-        targetSdk rootProject.ext.targetSdkVersion ?: 35
-        versionCode 1
-        versionName "1.0.0"
+        minSdk rootProject.ext.minSdkVersion
+        targetSdk rootProject.ext.targetSdkVersion
+        versionCode 8          // Phase 8 — increment for every Play Store upload
+        versionName "8.0.0"
         multiDexEnabled true
+
+        // Bundle only arm64-v8a for Play Store (arm32 via separate track if needed)
+        ndk {
+            abiFilters "arm64-v8a"
+        }
     }
 
     signingConfigs {
@@ -38,27 +48,77 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        release {
+            if (keystorePropertiesFile.exists()) {
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            } else {
+                // CI/CD fallback: set these as environment variables in your pipeline
+                storeFile file(System.getenv("RELEASE_KEYSTORE_PATH") ?: 'debug.keystore')
+                storePassword System.getenv("RELEASE_KEYSTORE_PASSWORD") ?: 'android'
+                keyAlias System.getenv("RELEASE_KEY_ALIAS") ?: 'androiddebugkey'
+                keyPassword System.getenv("RELEASE_KEY_PASSWORD") ?: 'android'
+            }
+        }
     }
 
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
+            debuggable true
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
         }
         release {
-            signingConfig signingConfigs.debug
-            shrinkResources false
-            minifyEnabled enableMinifyInReleaseBuilds
-            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+            signingConfig signingConfigs.release
+            minifyEnabled false          // Set true only after testing ProGuard rules thoroughly
+            shrinkResources false        // Keep false while minifyEnabled = false
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+            // Production: no debug symbols in release APK
+            debuggable false
+            jniDebuggable false
+            renderscriptDebuggable false
+        }
+    }
+
+    // ── Split APKs by ABI for Play Store size optimization ─────────────────
+    splits {
+        abi {
+            reset()
+            enable true
+            universalApk false
+            include "arm64-v8a"
         }
     }
 
     packagingOptions {
         pickFirst '**/libc++_shared.so'
         pickFirst '**/libfbjni.so'
+        pickFirst '**/libonnxruntime.so'
+        // Exclude unnecessary native libraries from the APK
+        exclude '**/libjsc.so'
     }
 
     androidResources {
         ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~'
+    }
+
+    // ── Lint: fail on errors, warn on warnings ──────────────────────────────
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+
+    // ── Java / Kotlin compile options ───────────────────────────────────────
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
     }
 }
 
@@ -66,7 +126,7 @@ dependencies {
     // React Native
     implementation("com.facebook.react:react-android")
 
-    // Hermes
+    // Hermes JS engine
     def hermesEnabled = project.properties['hermesEnabled'] ?: 'true'
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")

@@ -1,0 +1,21 @@
+## Android SDK local.properties template
+## ─────────────────────────────────────────────────────────────────────────────
+## USAGE:
+##   1. Copy this file to android/local.properties (DO NOT commit local.properties)
+##   2. Replace the sdk.dir path with your actual Android SDK location
+## ─────────────────────────────────────────────────────────────────────────────
+
+## macOS default:
+# sdk.dir=/Users/<USERNAME>/Library/Android/sdk
+
+## Linux / CI default:
+# sdk.dir=/home/<USERNAME>/Android/Sdk
+
+## Windows default:
+# sdk.dir=C\:\\Users\\<USERNAME>\\AppData\\Local\\Android\\Sdk
+
+## Android Studio on macOS (Apple Silicon):
+# sdk.dir=/Users/<USERNAME>/Library/Android/sdk
+
+## Example (fill in your username):
+sdk.dir=/home/runner/Android/Sdk

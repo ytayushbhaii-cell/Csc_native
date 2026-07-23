@@ -14,22 +14,107 @@ The workflow "Start application" handles this. The app runs at http://localhost:
 > Local compatibility adapters in `shims/` keep the existing screen imports and UI
 > unchanged while routing all runtime work through React Native CLI modules.
 
-## Android React Native CLI
+---
+
+## Phase 8 — Android Build & Play Store Release
+
+### Prerequisites (on your local machine / CI)
+| Tool | Version | How to install |
+|------|---------|----------------|
+| JDK | 17+ | `brew install --cask temurin` / Android Studio bundled JDK |
+| Android SDK | API 36 | Android Studio → SDK Manager |
+| Build Tools | 36.0.0 | Android Studio → SDK Manager |
+| NDK | 27.1.12297006 | Android Studio → SDK Manager → NDK (Side by side) |
+| pnpm | latest | `npm i -g pnpm` |
+
+### Quick Build
+```bash
+# Install JS dependencies first
+cd Offline-Smart-Toolkit/artifacts/mobile
+pnpm install
+
+# Build Debug APK + Release APK + Play Store AAB
+./build-android.sh all
+
+# Or individually:
+./build-android.sh debug    # Debug APK
+./build-android.sh release  # Release APK
+./build-android.sh bundle   # Release AAB (Play Store upload)
+./build-android.sh all clean  # Clean then build all
+```
+
+### Manual Gradle commands
+```bash
+cd Offline-Smart-Toolkit/artifacts/mobile/android
+
+# Debug APK
+./gradlew assembleDebug
+# → app/build/outputs/apk/debug/app-arm64-v8a-debug.apk
+
+# Release APK
+./gradlew assembleRelease
+# → app/build/outputs/apk/release/app-arm64-v8a-release.apk
+
+# Play Store AAB
+./gradlew bundleRelease
+# → app/build/outputs/bundle/release/app-release.aab
+```
+
+### Release Signing Setup
+The release keystore is already generated: `android/app/release.keystore`
+Signing credentials are in: `android/key.properties`
+
+> ⚠️ **IMPORTANT — Security**:
+> - `key.properties` and `release.keystore` are in `.gitignore` — do NOT commit them.
+> - Back up `release.keystore` securely. Losing it means you cannot update your Play Store app.
+> - Current keystore alias: `csc-smart-toolkit` | Validity: 10,000 days
+
+### local.properties (required for builds)
+```bash
+# Create android/local.properties pointing to your Android SDK:
+echo "sdk.dir=$ANDROID_HOME" > Offline-Smart-Toolkit/artifacts/mobile/android/local.properties
+
+# Or copy the template and edit:
+cp Offline-Smart-Toolkit/artifacts/mobile/android/local.properties.template \
+   Offline-Smart-Toolkit/artifacts/mobile/android/local.properties
+```
+
+### Android Configuration Summary
+| Setting | Value |
+|---------|-------|
+| applicationId | `com.cscsmarttoolkit.app` |
+| compileSdk | 36 (Android 16) |
+| targetSdk | 36 |
+| minSdk | 24 (Android 7.0, covers 99%+ devices) |
+| versionCode | 8 |
+| versionName | 8.0.0 |
+| Architecture | arm64-v8a |
+| JS engine | Hermes |
+| New Architecture | disabled |
+| Kotlin | 2.1.20 |
+| Gradle | 8.14.3 |
+| AGP | 8.11.0 |
+
+### Play Store Checklist
+- [x] Release keystore generated (`release.keystore`)
+- [x] Separate debug / release signing configs
+- [x] Release build does NOT use debug keystore
+- [x] `minSdk 24` — covers Android 7.0+
+- [x] `targetSdk 36` — Android 16 compliant
+- [x] Scoped media permissions (READ_MEDIA_IMAGES/VIDEO — API 33+)
+- [x] `READ_MEDIA_VISUAL_USER_SELECTED` for API 34+ partial access
+- [x] Legacy storage permissions with `maxSdkVersion` caps
+- [x] `allowBackup="false"` (Play Store recommends for sensitive apps)
+- [x] FileProvider configured for file sharing intents
+- [x] `hardwareAccelerated="true"` + `largeHeap="true"` for AI workloads
+- [x] ProGuard rules for ONNX Runtime, TF.js, Reanimated, ML Kit
+- [x] ABI splits (arm64-v8a only for Play Store)
+- [x] `versionCode` incremented to 8 for Phase 8
+
+### Android React Native CLI
 
 The committed `android/` directory is a standard React Native CLI project. Do NOT
 delete or regenerate it with Expo tooling.
-
-### To build an APK
-```bash
-cd Offline-Smart-Toolkit/artifacts/mobile
-pnpm build:apk
-```
-
-### To build an AAB
-```bash
-cd Offline-Smart-Toolkit/artifacts/mobile
-pnpm build:aab
-```
 
 ### To run on a connected Android device (requires local Android SDK)
 ```bash
