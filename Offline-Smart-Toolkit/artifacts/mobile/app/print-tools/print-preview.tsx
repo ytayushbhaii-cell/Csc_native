@@ -94,7 +94,7 @@ export default function PrintPreview() {
     if (!imageUri || !layout) return;
     setExporting(true);
     try {
-      initPrintDb();
+      await initPrintDb();
       const fileName = `preview_${Date.now()}.pdf`;
       // Pass the current rotation so the exported PDF matches what the user sees
       const uri = await exportA4ToPDF({
@@ -103,7 +103,7 @@ export default function PrintPreview() {
         rotation: rotation as 0 | 90 | 180 | 270,
         fileName,
       });
-      addPrintHistory('Print Preview', fileName, 'PDF');
+      await addPrintHistory('Print Preview', fileName, 'PDF');
       await shareFile(uri);
     } catch (e: any) {
       Alert.alert('Export Failed', e?.message ?? 'Could not generate PDF.');

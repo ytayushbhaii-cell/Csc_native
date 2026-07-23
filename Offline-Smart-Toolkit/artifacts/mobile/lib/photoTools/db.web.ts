@@ -1,8 +1,5 @@
-// Web build of the Photo Tools local store. expo-sqlite's web backend needs
-// extra Metro wasm-asset wiring this project doesn't have configured, and
-// history/usage tracking is a nice-to-have enhancement, not core
-// functionality, so every function here is a safe no-op on web. Native
-// (iOS/Android) uses the real SQLite-backed implementation in db.ts.
+// Web build of the optional Photo Tools local store. Native Android uses the
+// React Native CLI SQLite bridge in db.ts.
 export interface PhotoRecentFile {
   id: number;
   toolId: string;

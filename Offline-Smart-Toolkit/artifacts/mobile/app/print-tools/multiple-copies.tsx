@@ -61,7 +61,7 @@ export default function MultipleCopies() {
     if (!imageUri) return;
     setExporting(true);
     try {
-      initPrintDb();
+      await initPrintDb();
       const imageUris = Array(count).fill(imageUri);
       const uri = await exportSheetToPDF({
         layout,
@@ -70,7 +70,7 @@ export default function MultipleCopies() {
         paperHeightMm: paper.height,
         fileName: `copies_${count}_${Date.now()}.pdf`,
       });
-      addPrintHistory('Multiple Copies', `copies_${count}.pdf`, 'PDF');
+      await addPrintHistory('Multiple Copies', `copies_${count}.pdf`, 'PDF');
       await shareFile(uri);
     } catch (e: any) {
       Alert.alert('Export Failed', e?.message ?? 'Could not generate PDF.');

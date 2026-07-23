@@ -97,7 +97,13 @@ export async function getFileInfo(path: string): Promise<LocalFile | null> {
 export async function openFile(path: string): Promise<void> {
   if (typeof window !== 'undefined') window.open(path, '_blank');
 }
-export async function pickOutputFolder(): Promise<string | null> { return null; }
+export async function pickOutputFolder(): Promise<string | null> {
+  if (typeof window === 'undefined' || typeof (window as any).showDirectoryPicker !== 'function') {
+    return null;
+  }
+  const handle = await (window as any).showDirectoryPicker();
+  return handle?.name ? `browser-directory://${handle.name}` : null;
+}
 export async function readFileAsBase64(uri: string): Promise<string> {
   if (uri.startsWith('data:')) return uri.split(',')[1] ?? '';
   const response = await fetch(uri);

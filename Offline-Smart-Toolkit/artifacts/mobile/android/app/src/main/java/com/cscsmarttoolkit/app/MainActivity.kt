@@ -2,6 +2,7 @@ package com.cscsmarttoolkit.app
 
 import android.os.Build
 import android.os.Bundle
+import android.content.Intent
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
@@ -36,5 +37,15 @@ class MainActivity : ReactActivity() {
             return
         }
         super.invokeDefaultOnBackPressed()
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        (application as? MainApplication)
+            ?.reactNativeHost
+            ?.reactInstanceManager
+            ?.currentReactContext
+            ?.getNativeModule(Phase6NativeModule::class.java)
+            ?.onActivityResult(requestCode, resultCode, data)
     }
 }

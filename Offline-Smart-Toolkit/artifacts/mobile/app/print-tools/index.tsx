@@ -45,13 +45,18 @@ export default function PrintToolsHome() {
 
   useFocusEffect(
     useCallback(() => {
+      let active = true;
+      const loadRecent = async () => {
       try {
-        initPrintDb();
-        const rows = getRecentPrints(5);
-        setRecent(rows);
+        await initPrintDb();
+        const rows = await getRecentPrints(5);
+        if (active) setRecent(rows);
       } catch {
         // ignore
       }
+      };
+      void loadRecent();
+      return () => { active = false; };
     }, [])
   );
 

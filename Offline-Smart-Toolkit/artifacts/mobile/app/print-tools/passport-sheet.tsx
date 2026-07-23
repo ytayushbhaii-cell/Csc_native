@@ -68,7 +68,7 @@ export default function PassportSheetGenerator() {
     if (!imageUri) return;
     setExporting(true);
     try {
-      initPrintDb();
+      await initPrintDb();
       const imageUris = Array(count).fill(imageUri);
       const uri = await exportSheetToPDF({
         layout,
@@ -77,7 +77,7 @@ export default function PassportSheetGenerator() {
         paperHeightMm: paper.height,
         fileName: `passport_sheet_${count}_${Date.now()}.pdf`,
       });
-      addPrintHistory('Passport Sheet', `passport_sheet_${count}.pdf`, 'PDF');
+      await addPrintHistory('Passport Sheet', `passport_sheet_${count}.pdf`, 'PDF');
       await shareFile(uri);
     } catch (e: any) {
       Alert.alert('Export Failed', e?.message ?? 'Could not generate PDF.');

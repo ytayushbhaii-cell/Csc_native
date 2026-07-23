@@ -1,6 +1,5 @@
-// SQLite usage-tracking for utility tools.
-// Native only — see db.web.ts for the web no-op.
-import * as SQLite from 'expo-sqlite';
+// Offline usage tracking backed by the React Native CLI SQLite bridge.
+import { executeSql, querySql } from '@/lib/phase6/LocalSqlite';
 
 export interface UtilityUsageEntry {
   id: number;
@@ -9,59 +8,59 @@ export interface UtilityUsageEntry {
   usedAt: number;
 }
 
-let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
+let initialized: Promise<void> | null = null;
 
-async function getDb(): Promise<SQLite.SQLiteDatabase> {
-  if (!dbPromise) {
-    dbPromise = SQLite.openDatabaseAsync('csc_utilities.db').then(async (db) => {
-      await db.execAsync(`
-        PRAGMA journal_mode = WAL;
-        CREATE TABLE IF NOT EXISTS utility_usage (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          tool_id TEXT NOT NULL,
-          tool_name TEXT NOT NULL,
-          used_at INTEGER NOT NULL
-        );
-        CREATE INDEX IF NOT EXISTS idx_utility_usage_tool ON utility_usage(tool_id, used_at DESC);
-      `);
-      return db;
-    });
+async function init(): Promise<void> {
+  if (!initialized) {
+    initialized = executeSql(`
+      CREATE TABLE IF NOT EXISTS utility_usage (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tool_id TEXT NOT NULL,
+        tool_name TEXT NOT NULL,
+        used_at INTEGER NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_utility_usage_tool ON utility_usage(tool_id, used_at DESC);
+    `);
   }
-  return dbPromise;
+  await initialized;
 }
 
 export async function initUtilitiesDb(): Promise<void> {
-  await getDb();
+  await init();
 }
 
 export async function recordToolUsage(toolId: string, toolName: string): Promise<void> {
-  const db = await getDb();
-  await db.runAsync(
-    `INSERT INTO utility_usage (tool_id, tool_name, used_at) VALUES (?, ?, ?)`,
+  await init();
+  await executeSql(
+    'INSERT INTO utility_usage (tool_id, tool_name, used_at) VALUES (?, ?, ?)',
     [toolId, toolName, Date.now()],
   );
 }
 
 export async function getRecentUsage(limit = 10): Promise<UtilityUsageEntry[]> {
-  const db = await getDb();
-  const rows = await db.getAllAsync<any>(
-    `SELECT id, tool_id as toolId, tool_name as toolName, used_at as usedAt
-     FROM utility_usage ORDER BY used_at DESC LIMIT ?`,
+  await init();
+  const rows = await querySql<{ id: number; tool_id: string; tool_name: string; used_at: number }>(
+    'SELECT id, tool_id, tool_name, used_at FROM utility_usage ORDER BY used_at DESC LIMIT ?',
     [limit],
   );
-  return rows as UtilityUsageEntry[];
+  return rows.map((row) => ({
+    id: row.id,
+    toolId: row.tool_id,
+    toolName: row.tool_name,
+    usedAt: row.used_at,
+  }));
 }
 
 export async function getToolUsageCount(toolId: string): Promise<number> {
-  const db = await getDb();
-  const row = await db.getFirstAsync<{ count: number }>(
-    `SELECT COUNT(*) as count FROM utility_usage WHERE tool_id = ?`,
+  await init();
+  const rows = await querySql<{ count: number }>(
+    'SELECT COUNT(*) as count FROM utility_usage WHERE tool_id = ?',
     [toolId],
   );
-  return row?.count ?? 0;
+  return rows[0]?.count ?? 0;
 }
 
 export async function clearUsageHistory(): Promise<void> {
-  const db = await getDb();
-  await db.runAsync(`DELETE FROM utility_usage`);
+  await init();
+  await executeSql('DELETE FROM utility_usage');
 }

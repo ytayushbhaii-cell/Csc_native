@@ -11,6 +11,7 @@ import { useColors } from '@/hooks/useColors';
 import { useTheme } from '@/context/ThemeContext';
 import { useSettings } from '@/context/SettingsContext';
 import type { DefaultFolderValue } from '@/lib/features/settings/SettingsService';
+import { pickOutputFolder } from '@/lib/phase6/Phase6FileService';
 
 const TOOL_COLOR = '#10B981';
 
@@ -44,6 +45,13 @@ const FOLDERS: FolderOption[] = [
     description: 'Save PDFs and documents to the Documents folder',
     path: '/storage/emulated/0/Documents/',
   },
+  {
+    value: 'custom',
+    label: 'Custom folder',
+    icon: 'folder-star-outline',
+    description: 'Choose a folder with the Android folder picker',
+    path: 'Select a folder when saving',
+  },
 ];
 
 export default function DefaultFolderScreen() {
@@ -66,6 +74,13 @@ export default function DefaultFolderScreen() {
     if (busy) return;
     setBusy(true);
     try {
+      if (selected === 'custom') {
+        const selectedUri = await pickOutputFolder();
+        if (!selectedUri) {
+          Alert.alert('Folder not selected', 'Choose a folder to use custom output storage.');
+          return;
+        }
+      }
       await setDefaultFolder(selected);
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);

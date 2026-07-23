@@ -73,9 +73,9 @@ export default function A4LayoutTool() {
     if (!imageUri || !layout) return;
     setExporting(true);
     try {
-      initPrintDb();
+      await initPrintDb();
       const uri = await exportA4ToPDF({ layout, imageUri, fileName: `a4_layout_${Date.now()}.pdf` });
-      addPrintHistory('A4 Layout', `a4_layout_${Date.now()}.pdf`, 'PDF');
+      await addPrintHistory('A4 Layout', `a4_layout_${Date.now()}.pdf`, 'PDF');
       await shareFile(uri);
     } catch (e: any) {
       Alert.alert('Export Failed', e?.message ?? 'Could not generate PDF.');

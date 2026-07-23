@@ -120,7 +120,7 @@ async function recordPhase6PrintExport(
  * Returns the URI of the exported file.
  */
 export async function executePrintJob(job: PrintJob): Promise<PrintResult> {
-  initPrintDb();
+  await initPrintDb();
 
   switch (job.kind) {
     case 'a4':
@@ -176,7 +176,7 @@ async function _runA4Job(job: A4PrintJob): Promise<PrintResult> {
   // Reflect the true delivered format (native may fall back to PDF)
   const actualFormat = formatFromUri(uri);
   const actualFileName = uri.split('/').pop() ?? fileName;
-  addPrintHistory('A4 Layout', actualFileName, actualFormat);
+  await addPrintHistory('A4 Layout', actualFileName, actualFormat);
   await recordPhase6PrintExport('a4-layout-export', uri, actualFileName, actualFormat);
   return { uri, format: actualFormat, fileName: actualFileName };
 }
@@ -219,7 +219,7 @@ async function _runPassportJob(job: PassportPrintJob): Promise<PrintResult> {
 
   const actualFormat = formatFromUri(uri);
   const actualFileName = uri.split('/').pop() ?? fileName;
-  addPrintHistory('Passport Sheet', actualFileName, actualFormat);
+  await addPrintHistory('Passport Sheet', actualFileName, actualFormat);
   await recordPhase6PrintExport('passport-sheet-export', uri, actualFileName, actualFormat);
   return { uri, format: actualFormat, fileName: actualFileName };
 }
@@ -251,7 +251,7 @@ async function _runCopiesJob(job: MultiCopiesPrintJob): Promise<PrintResult> {
 
   const actualFormat = formatFromUri(uri);
   const actualFileName = uri.split('/').pop() ?? fileName;
-  addPrintHistory('Multiple Copies', actualFileName, actualFormat);
+  await addPrintHistory('Multiple Copies', actualFileName, actualFormat);
   await recordPhase6PrintExport('multiple-copies-export', uri, actualFileName, actualFormat);
   return { uri, format: actualFormat, fileName: actualFileName };
 }

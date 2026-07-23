@@ -100,12 +100,12 @@ export default function CustomPaperSize() {
     if (!imageUri || !layout) return;
     setExporting(true);
     try {
-      initPrintDb();
-      saveSetting('last_paper_w', String(actualW));
-      saveSetting('last_paper_h', String(actualH));
-      saveSetting('last_orientation', orientation);
+      await initPrintDb();
+      await saveSetting('last_paper_w', String(actualW));
+      await saveSetting('last_paper_h', String(actualH));
+      await saveSetting('last_orientation', orientation);
       const uri = await exportA4ToPDF({ layout, imageUri, fileName: `custom_paper_${Date.now()}.pdf` });
-      addPrintHistory('Custom Paper', `custom_${actualW}x${actualH}mm.pdf`, 'PDF');
+      await addPrintHistory('Custom Paper', `custom_${actualW}x${actualH}mm.pdf`, 'PDF');
       await shareFile(uri);
     } catch (e: any) {
       Alert.alert('Export Failed', e?.message ?? 'Could not generate PDF.');

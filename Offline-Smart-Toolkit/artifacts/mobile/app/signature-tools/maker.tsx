@@ -43,6 +43,10 @@ export default function SignatureMakerScreen() {
   const [exporting, setExporting] = useState(false);
   const viewShotRef = useRef<ViewShot>(null);
   const canvasRef = useRef<View>(null);
+  // PanResponder is created once, so keep the live stroke in a ref.
+  // Otherwise on release it can read the initial empty state and clear
+  // the signature that was just drawn.
+  const currentStrokeRef = useRef<StrokePath>([]);
 
   const isFav = favoriteIds.includes('signature-maker');
   const hasDrawing = strokes.length > 0 || currentStroke.length > 0;
@@ -54,14 +58,30 @@ export default function SignatureMakerScreen() {
       onMoveShouldSetPanResponder: () => true,
       onPanResponderGrant: (evt) => {
         const { locationX, locationY } = evt.nativeEvent;
-        setCurrentStroke([{ x: locationX, y: locationY }]);
+        const stroke = [{ x: locationX, y: locationY }];
+        currentStrokeRef.current = stroke;
+        setCurrentStroke(stroke);
       },
       onPanResponderMove: (evt) => {
         const { locationX, locationY } = evt.nativeEvent;
-        setCurrentStroke((prev) => [...prev, { x: locationX, y: locationY }]);
+        const stroke = [...currentStrokeRef.current, { x: locationX, y: locationY }];
+        currentStrokeRef.current = stroke;
+        setCurrentStroke(stroke);
       },
       onPanResponderRelease: () => {
-        setStrokes((prev) => [...prev, currentStroke]);
+        const completedStroke = currentStrokeRef.current;
+        if (completedStroke.length > 0) {
+          setStrokes((prev) => [...prev, completedStroke]);
+        }
+        currentStrokeRef.current = [];
+        setCurrentStroke([]);
+      },
+      onPanResponderTerminate: () => {
+        const completedStroke = currentStrokeRef.current;
+        if (completedStroke.length > 0) {
+          setStrokes((prev) => [...prev, completedStroke]);
+        }
+        currentStrokeRef.current = [];
         setCurrentStroke([]);
       },
     })
@@ -69,6 +89,7 @@ export default function SignatureMakerScreen() {
 
   const handleClear = () => {
     setStrokes([]);
+    currentStrokeRef.current = [];
     setCurrentStroke([]);
   };
 

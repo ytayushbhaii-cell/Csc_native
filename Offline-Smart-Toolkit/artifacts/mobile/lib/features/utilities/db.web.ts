@@ -1,4 +1,4 @@
-// Web no-op for utilities db — expo-sqlite web needs extra wasm wiring.
+// Web no-op for optional utility usage history.
 // Usage tracking is a nice-to-have; we fall back gracefully on web.
 import type { UtilityUsageEntry } from './db';
 export type { UtilityUsageEntry };

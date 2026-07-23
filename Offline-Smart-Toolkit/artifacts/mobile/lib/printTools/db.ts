@@ -1,45 +1,5 @@
-// ────────────────────────────────────────────────────────────────────────────
-// Print Tools – SQLite persistence
-// Stores print history, recent files, favorites, and last-used settings.
-// 100 % offline – no network calls.
-// ────────────────────────────────────────────────────────────────────────────
-import * as SQLite from 'expo-sqlite';
-
-// ── schema ───────────────────────────────────────────────────────────────────
-
-const DB_NAME = 'print_tools.db';
-
-let _db: SQLite.SQLiteDatabase | null = null;
-
-function db(): SQLite.SQLiteDatabase {
-  if (!_db) _db = SQLite.openDatabaseSync(DB_NAME);
-  return _db;
-}
-
-export function initPrintDb(): void {
-  const d = db();
-  d.execSync(`
-    CREATE TABLE IF NOT EXISTS print_history (
-      id          INTEGER PRIMARY KEY AUTOINCREMENT,
-      tool        TEXT    NOT NULL,
-      file_name   TEXT    NOT NULL,
-      export_type TEXT    NOT NULL DEFAULT 'PDF',
-      created_at  TEXT    NOT NULL DEFAULT (datetime('now','localtime'))
-    );
-
-    CREATE TABLE IF NOT EXISTS print_settings (
-      key   TEXT PRIMARY KEY,
-      value TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS print_favorites (
-      tool_id    TEXT PRIMARY KEY,
-      created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
-    );
-  `);
-}
-
-// ── history ───────────────────────────────────────────────────────────────────
+// Offline print persistence backed by the React Native CLI SQLite bridge.
+import { executeSql, querySql } from '@/lib/phase6/LocalSqlite';
 
 export interface PrintHistoryRow {
   id: number;
@@ -49,90 +9,81 @@ export interface PrintHistoryRow {
   created_at: string;
 }
 
-export function addPrintHistory(tool: string, fileName: string, exportType = 'PDF'): void {
-  try {
-    db().runSync(
-      `INSERT INTO print_history (tool, file_name, export_type) VALUES (?, ?, ?)`,
-      [tool, fileName, exportType]
-    );
-  } catch {
-    // non-fatal
+let initialized: Promise<void> | null = null;
+
+export function initPrintDb(): Promise<void> {
+  if (!initialized) {
+    initialized = executeSql(`
+      CREATE TABLE IF NOT EXISTS print_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tool TEXT NOT NULL,
+        file_name TEXT NOT NULL,
+        export_type TEXT NOT NULL DEFAULT 'PDF',
+        created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+      );
+      CREATE TABLE IF NOT EXISTS print_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS print_favorites (
+        tool_id TEXT PRIMARY KEY,
+        created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+      );
+    `);
   }
+  return initialized;
 }
 
-export function getRecentPrints(limit = 20): PrintHistoryRow[] {
-  try {
-    return db().getAllSync<PrintHistoryRow>(
-      `SELECT * FROM print_history ORDER BY id DESC LIMIT ?`,
-      [limit]
-    );
-  } catch {
-    return [];
-  }
+export async function addPrintHistory(tool: string, fileName: string, exportType = 'PDF'): Promise<void> {
+  await initPrintDb();
+  await executeSql(
+    'INSERT INTO print_history (tool, file_name, export_type) VALUES (?, ?, ?)',
+    [tool, fileName, exportType],
+  );
 }
 
-export function clearPrintHistory(): void {
-  try {
-    db().runSync(`DELETE FROM print_history`);
-  } catch {
-    // non-fatal
-  }
+export async function getRecentPrints(limit = 20): Promise<PrintHistoryRow[]> {
+  await initPrintDb();
+  return querySql<PrintHistoryRow>(
+    'SELECT id, tool, file_name, export_type, created_at FROM print_history ORDER BY id DESC LIMIT ?',
+    [limit],
+  );
 }
 
-// ── settings (key-value store) ────────────────────────────────────────────────
-
-export function saveSetting(key: string, value: string): void {
-  try {
-    db().runSync(
-      `INSERT INTO print_settings (key, value) VALUES (?, ?)
-       ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
-      [key, value]
-    );
-  } catch {
-    // non-fatal
-  }
+export async function clearPrintHistory(): Promise<void> {
+  await initPrintDb();
+  await executeSql('DELETE FROM print_history');
 }
 
-export function getSetting(key: string, defaultValue = ''): string {
-  try {
-    const row = db().getFirstSync<{ value: string }>(
-      `SELECT value FROM print_settings WHERE key = ?`,
-      [key]
-    );
-    return row?.value ?? defaultValue;
-  } catch {
-    return defaultValue;
-  }
+export async function saveSetting(key: string, value: string): Promise<void> {
+  await initPrintDb();
+  await executeSql(
+    'INSERT INTO print_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
+    [key, value],
+  );
 }
 
-// ── favorites ─────────────────────────────────────────────────────────────────
-
-export function addPrintFavorite(toolId: string): void {
-  try {
-    db().runSync(
-      `INSERT OR IGNORE INTO print_favorites (tool_id) VALUES (?)`,
-      [toolId]
-    );
-  } catch {
-    // non-fatal
-  }
+export async function getSetting(key: string, defaultValue = ''): Promise<string> {
+  await initPrintDb();
+  const rows = await querySql<{ value: string }>(
+    'SELECT value FROM print_settings WHERE key = ?',
+    [key],
+  );
+  return rows[0]?.value ?? defaultValue;
 }
 
-export function removePrintFavorite(toolId: string): void {
-  try {
-    db().runSync(`DELETE FROM print_favorites WHERE tool_id = ?`, [toolId]);
-  } catch {
-    // non-fatal
-  }
+export async function addPrintFavorite(toolId: string): Promise<void> {
+  await initPrintDb();
+  await executeSql('INSERT OR IGNORE INTO print_favorites (tool_id) VALUES (?)', [toolId]);
 }
 
-export function getPrintFavorites(): string[] {
-  try {
-    const rows = db().getAllSync<{ tool_id: string }>(
-      `SELECT tool_id FROM print_favorites`
-    );
-    return rows.map((r) => r.tool_id);
-  } catch {
-    return [];
-  }
+export async function removePrintFavorite(toolId: string): Promise<void> {
+  await initPrintDb();
+  await executeSql('DELETE FROM print_favorites WHERE tool_id = ?', [toolId]);
+}
+
+export async function getPrintFavorites(): Promise<string[]> {
+  await initPrintDb();
+  const rows = await querySql<{ tool_id: string }>('SELECT tool_id FROM print_favorites');
+  return rows.map((row) => row.tool_id);
 }

@@ -1,8 +1,7 @@
 // ────────────────────────────────────────────────────────────────────────────
 // Print Tools – SQLite persistence (WEB stub)
-// expo-sqlite's web backend needs extra Metro wasm-asset wiring this project
-// doesn't have configured, so all persistence functions are safe no-ops on
-// web. Native (iOS / Android) uses the real SQLite-backed db.ts.
+// The web preview keeps optional print persistence disabled. Native Android
+// uses the React Native CLI SQLite bridge in db.ts.
 // ────────────────────────────────────────────────────────────────────────────
 
 export interface PrintHistoryRow {
@@ -13,30 +12,30 @@ export interface PrintHistoryRow {
   created_at: string;
 }
 
-export function initPrintDb(): void {}
+export async function initPrintDb(): Promise<void> {}
 
-export function addPrintHistory(
+export async function addPrintHistory(
   _tool: string,
   _fileName: string,
   _exportType = 'PDF'
-): void {}
+): Promise<void> {}
 
-export function getRecentPrints(_limit = 20): PrintHistoryRow[] {
+export async function getRecentPrints(_limit = 20): Promise<PrintHistoryRow[]> {
   return [];
 }
 
-export function clearPrintHistory(): void {}
+export async function clearPrintHistory(): Promise<void> {}
 
-export function saveSetting(_key: string, _value: string): void {}
+export async function saveSetting(_key: string, _value: string): Promise<void> {}
 
-export function getSetting(_key: string, defaultValue = ''): string {
+export async function getSetting(_key: string, defaultValue = ''): Promise<string> {
   return defaultValue;
 }
 
-export function addPrintFavorite(_toolId: string): void {}
+export async function addPrintFavorite(_toolId: string): Promise<void> {}
 
-export function removePrintFavorite(_toolId: string): void {}
+export async function removePrintFavorite(_toolId: string): Promise<void> {}
 
-export function getPrintFavorites(): string[] {
+export async function getPrintFavorites(): Promise<string[]> {
   return [];
 }

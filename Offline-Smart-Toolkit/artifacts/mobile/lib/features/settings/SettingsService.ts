@@ -18,7 +18,7 @@ export const KEYS = {
 export type ThemeValue        = string;
 export type LanguageValue     = 'en' | 'hi';
 export type PrintSizeValue    = 'a4' | 'letter' | 'legal' | 'passport';
-export type DefaultFolderValue = 'downloads' | 'pictures' | 'documents';
+export type DefaultFolderValue = 'downloads' | 'pictures' | 'documents' | 'custom';
 
 export const DEFAULTS = {
   theme:         'light'      as ThemeValue,
