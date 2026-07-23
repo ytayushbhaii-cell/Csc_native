@@ -193,11 +193,15 @@ export default function StampMakerScreen() {
 
   const update = (key: keyof StampConfig, value: any) => setCfg((prev) => ({ ...prev, [key]: value }));
 
+  const captureStamp = async (): Promise<string> => {
+    if (!viewShotRef.current) throw new Error('View not ready');
+    return (viewShotRef.current as any).capture();
+  };
+
   const handleExport = async () => {
-    if (!viewShotRef.current) return;
     setExporting(true);
     try {
-      const uri: string = await (viewShotRef.current as any).capture();
+      const uri = await captureStamp();
       const fileName = `Stamp-${cfg.shape}-${Date.now()}.png`;
       await addHistoryEntry({
         category: 'stamp',
@@ -209,6 +213,44 @@ export default function StampMakerScreen() {
       await exportFile(uri, fileName);
     } catch (e: any) {
       Alert.alert('Export failed', e?.message ?? 'Unknown error');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleShare = async () => {
+    setExporting(true);
+    try {
+      const uri = await captureStamp();
+      const fileName = `Stamp-${cfg.shape}-${Date.now()}.png`;
+      await addHistoryEntry({
+        category: 'stamp',
+        toolId: 'stamp-maker',
+        title: `${cfg.shape === 'round' ? 'Round' : 'Square'} Stamp`,
+        detail: cfg.topText,
+        outputUri: uri,
+      });
+      if (Platform.OS === 'web') {
+        try {
+          const res = await fetch(uri);
+          const blob = await res.blob();
+          const file = new File([blob], fileName, { type: 'image/png' });
+          if ((navigator as any).canShare?.({ files: [file] })) {
+            await (navigator as any).share({ files: [file], title: 'Stamp' });
+            return;
+          }
+        } catch { /* fall through */ }
+        await exportFile(uri, fileName);
+      } else {
+        const Sharing = await import('expo-sharing');
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Share Stamp' });
+        } else {
+          await exportFile(uri, fileName);
+        }
+      }
+    } catch (e: any) {
+      Alert.alert('Share failed', e?.message ?? 'Unknown error');
     } finally {
       setExporting(false);
     }
@@ -342,7 +384,7 @@ export default function StampMakerScreen() {
 
         <TouchableOpacity
           style={[styles.shareBtn, { borderColor: STAMP_COLOR_DEFAULT, borderRadius: colors.radius }]}
-          onPress={handleExport}
+          onPress={handleShare}
           disabled={exporting}
         >
           <MaterialCommunityIcons name="share-variant" size={20} color={STAMP_COLOR_DEFAULT} />

@@ -2,7 +2,7 @@
 // Supports Code128, EAN-13, EAN-8, UPC-A, and ITF-14.
 // No external library — fully offline.
 
-export type BarcodeFormat = 'CODE128' | 'EAN13' | 'EAN8' | 'UPCA' | 'ITF14';
+export type BarcodeFormat = 'CODE128' | 'CODE39' | 'EAN13' | 'EAN8' | 'UPCA' | 'UPCE' | 'ITF14';
 
 export interface BarSegment {
   isBar: boolean; // true = dark bar, false = space
@@ -155,13 +155,124 @@ function encodeITF14(text: string): BarSegment[] {
   return segs;
 }
 
+// ─── Code 39 ────────────────────────────────────────────────────────────────
+// Each character encodes as 5 bars + 4 spaces (9 elements, "3 of 9" = exactly 3 wide).
+// Narrow = 1 unit, Wide = 3 units.
+// Bit layout (MSB→LSB): bit8=bar1, bit7=space1, bit6=bar2, bit5=space2,
+//   bit4=bar3, bit3=space3, bit2=bar4, bit1=space4, bit0=bar5.
+// Each entry has exactly 3 bits set. Source: ISO/IEC 16388 / USS Code 39.
+const C39_CHARS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-. $/+%*';
+const C39_PATTERNS: number[] = [
+  // 0-9
+  0x034, 0x121, 0x061, 0x160, 0x025, 0x124, 0x064, 0x023, 0x122, 0x062,
+  // A-J
+  0x109, 0x049, 0x148, 0x019, 0x118, 0x058, 0x00D, 0x10C, 0x04C, 0x01C,
+  // K-T
+  0x103, 0x043, 0x142, 0x013, 0x112, 0x052, 0x007, 0x106, 0x046, 0x016,
+  // U-Z
+  0x181, 0x0C1, 0x1C0, 0x091, 0x190, 0x0D0,
+  // - . SPACE $ / + %
+  0x085, 0x184, 0x0C4, 0x0A8, 0x08A, 0x02A, 0x0A2,
+  // * (start/stop)
+  0x094,
+];
+const C39_NARROW = 1;
+const C39_WIDE = 3;
+const C39_GAP = 1; // inter-character gap (narrow space)
+
+function encodeCode39(text: string): BarSegment[] {
+  const upper = text.toUpperCase();
+  const STAR_IDX = C39_CHARS.indexOf('*');
+
+  const encodeChar = (idx: number): BarSegment[] => {
+    const pat = C39_PATTERNS[idx] ?? 0;
+    const segs: BarSegment[] = [];
+    for (let bit = 8; bit >= 0; bit--) {
+      const isWide = ((pat >> bit) & 1) === 1;
+      const w = isWide ? C39_WIDE : C39_NARROW;
+      // even bits (8,6,4,2,0) = bars; odd bits (7,5,3,1) = spaces
+      segs.push({ isBar: bit % 2 === 0, width: w });
+    }
+    return segs;
+  };
+
+  const segs: BarSegment[] = [{ isBar: false, width: 10 }]; // quiet zone
+  // Start *
+  segs.push(...encodeChar(STAR_IDX), { isBar: false, width: C39_GAP });
+
+  for (const ch of upper) {
+    const idx = C39_CHARS.indexOf(ch);
+    if (idx < 0) throw new Error(`Character "${ch}" not supported in Code 39`);
+    segs.push(...encodeChar(idx), { isBar: false, width: C39_GAP });
+  }
+
+  // Stop *
+  segs.push(...encodeChar(STAR_IDX));
+  segs.push({ isBar: false, width: 10 }); // quiet zone
+  return segs;
+}
+
+// ─── UPC-E ───────────────────────────────────────────────────────────────────
+// UPC-E is a compressed 6-digit UPC for small packages.
+// We accept up to 6 digits from the user and pad/encode accordingly.
+const UPCE_PARITY: string[] = [
+  'EEEOOO', 'EEOEOO', 'EEOOEO', 'EEOOOE', 'EOEEOO',
+  'EOOEEO', 'EOOOEE', 'EOEOEO', 'EOEOOE', 'EOOEOE',
+];
+
+function encodeUPCE(text: string): BarSegment[] {
+  // Normalise to 6 digits (strip non-digits, pad/trim)
+  const raw = text.replace(/\D/g, '').slice(0, 6).padStart(6, '0');
+  const digits = raw.split('').map(Number);
+
+  // Derive check digit via UPC-A expansion then EAN check
+  // Expand UPC-E to UPC-A for check digit calculation
+  const d = digits;
+  let expanded = '';
+  const last = d[5]!;
+  if (last <= 2) {
+    expanded = `0${d[0]}${d[1]}${last}0000${d[2]}${d[3]}${d[4]}`;
+  } else if (last === 3) {
+    expanded = `0${d[0]}${d[1]}${d[2]}00000${d[3]}${d[4]}`;
+  } else if (last === 4) {
+    expanded = `0${d[0]}${d[1]}${d[2]}${d[3]}00000${d[4]}`;
+  } else {
+    expanded = `0${d[0]}${d[1]}${d[2]}${d[3]}${d[4]}0000${last}`;
+  }
+  const expDigits = expanded.split('').map(Number);
+  // eanCheckDigit uses EAN-13 weighting (position 0 × 1, position 1 × 3, …).
+  // UPC-A check needs position 0 × 3. Prepend an extra 0 so the 11-digit array
+  // becomes 12 digits — same trick encodeUPCA uses internally via encodeEAN13.
+  const check = eanCheckDigit([0, ...expDigits.slice(0, 11)]);
+
+  // Parity pattern for check digit
+  const parity = UPCE_PARITY[check] ?? 'EEEOOO';
+
+  const segs: BarSegment[] = [{ isBar: false, width: 9 }];
+  // Start: 101
+  segs.push({ isBar: true, width: 1 }, { isBar: false, width: 1 }, { isBar: true, width: 1 });
+  for (let i = 0; i < 6; i++) {
+    segs.push(...eanDigitSegs(digits[i]!, parity[i] === 'O' ? 'L' : 'G'));
+  }
+  // End: 010101
+  segs.push(
+    { isBar: false, width: 1 }, { isBar: true, width: 1 },
+    { isBar: false, width: 1 }, { isBar: true, width: 1 },
+    { isBar: false, width: 1 }, { isBar: true, width: 1 },
+  );
+  segs.push({ isBar: false, width: 9 });
+  return segs;
+}
+
 // ─── Public API ─────────────────────────────────────────────────────────────
 export function generateBarcode(text: string, format: BarcodeFormat): BarSegment[] {
   switch (format) {
     case 'CODE128': return encodeCode128(text);
+    case 'CODE39':  return encodeCode39(text);
     case 'EAN13':   return encodeEAN13(text);
     case 'EAN8':    return encodeEAN8(text);
     case 'UPCA':    return encodeUPCA(text);
+    case 'UPCE':    return encodeUPCE(text);
     case 'ITF14':   return encodeITF14(text);
     default:        return encodeCode128(text);
   }
@@ -185,6 +296,12 @@ export function formatLabel(text: string, format: BarcodeFormat): string {
       const c = eanCheckDigit(d.split('').map(Number));
       return d[0] + ' ' + d.slice(1, 6) + ' ' + d.slice(6) + c;
     }
+    case 'UPCE': {
+      const d = text.replace(/\D/g, '').slice(0, 6).padStart(6, '0');
+      return d.slice(0, 3) + ' ' + d.slice(3);
+    }
+    case 'CODE39':
+      return '*' + text.toUpperCase() + '*';
     default:
       return text;
   }

@@ -22,9 +22,11 @@ const BARCODE_COLOR = '#7C3AED';
 
 const FORMATS: { id: BarcodeFormat; label: string; hint: string }[] = [
   { id: 'CODE128', label: 'Code 128', hint: 'Any text/numbers' },
+  { id: 'CODE39',  label: 'Code 39',  hint: 'A-Z 0-9 - . space' },
   { id: 'EAN13',   label: 'EAN-13',   hint: '12 digits' },
   { id: 'EAN8',    label: 'EAN-8',    hint: '7 digits' },
   { id: 'UPCA',    label: 'UPC-A',    hint: '11 digits' },
+  { id: 'UPCE',    label: 'UPC-E',    hint: '6 digits' },
   { id: 'ITF14',   label: 'ITF-14',   hint: '13 digits' },
 ];
 

@@ -115,6 +115,12 @@ module.exports = {
       'expo-file-system/legacy': path.join(projectRoot, 'shims/expo-file-system-legacy'),
       // These packages use expo-modules-core native bindings; replace with web stubs
       'expo-image-picker':    path.join(projectRoot, 'shims/expo-image-picker'),
+      // expo-camera — native camera bridge; scanners fall back to "not available" UI on web
+      'expo-camera':          path.join(projectRoot, 'shims/expo-camera'),
+      // expo-sharing — native share sheet; screens use Web Share API / download fallback on web
+      'expo-sharing':         path.join(projectRoot, 'shims/expo-sharing'),
+      // expo-media-library — native gallery; guarded by Platform.OS !== 'web' in screens
+      'expo-media-library':   path.join(projectRoot, 'shims/expo-media-library'),
       // expo-blur ships its own web implementation — no shim needed
 
       // ── react-native-svg → web build (avoids native bridge code) ──────────
