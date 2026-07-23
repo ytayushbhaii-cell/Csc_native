@@ -188,8 +188,13 @@ function fmtETA(sec: number): string {
 // ─── ModelDownloadGate ────────────────────────────────────────────────────────
 
 interface Props {
-  /** Model IDs to check / download (from MODEL_SPECS keys) */
+  /** Required model IDs — gate stays closed until all are cached */
   modelIds: string[];
+  /**
+   * Optional model IDs — attempted after required ones but silently skipped
+   * on any error (404, no URL, cancelled). Gate opens regardless.
+   */
+  optionalModelIds?: string[];
   /** Called once all required models are ready */
   onReady: () => void;
   accentColor?: string;
@@ -209,7 +214,7 @@ interface DownloadState {
   totalModels: number;
 }
 
-export function ModelDownloadGate({ modelIds, onReady, accentColor = '#6366F1' }: Props) {
+export function ModelDownloadGate({ modelIds, optionalModelIds = [], onReady, accentColor = '#6366F1' }: Props) {
   const colors = useColors();
 
   const [gateState, setGateState] = useState<GateState>('checking');
@@ -221,31 +226,30 @@ export function ModelDownloadGate({ modelIds, onReady, accentColor = '#6366F1' }
   const abortRef = useRef<AbortController | null>(null);
   const successAnim = useRef(new Animated.Value(0)).current;
 
+  // ── Helper: filter to IDs that have a spec + downloadable URL ────────────
+  function validFor(ids: string[]) {
+    return ids.filter(id => {
+      const spec = MODEL_SPECS[id];
+      return spec != null && isDownloadableOnCurrentPlatform(spec.downloadUrl);
+    });
+  }
+
   // ── Check cache on mount ──────────────────────────────────────────────────
+  // Gate opens only when all *required* models are cached.
+  // Optional models are ignored for the open/closed decision.
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        // Only check models that have a spec AND a downloadable URL on this platform
-        const validIds = modelIds.filter(id => {
-          const spec = MODEL_SPECS[id];
-          if (!spec) return false;
-          return isDownloadableOnCurrentPlatform(spec.downloadUrl);
-        });
-        if (validIds.length === 0) {
+        const validRequired = validFor(modelIds);
+        if (validRequired.length === 0) {
           if (!cancelled) { setGateState('ready'); onReady(); }
           return;
         }
-
-        const checks = await Promise.all(validIds.map(id => modelDownloadService.isModelCached(id)));
+        const checks = await Promise.all(validRequired.map(id => modelDownloadService.isModelCached(id)));
         if (cancelled) return;
-
-        if (checks.every(Boolean)) {
-          setGateState('ready');
-          onReady();
-        } else {
-          setGateState('needs_download');
-        }
+        if (checks.every(Boolean)) { setGateState('ready'); onReady(); }
+        else { setGateState('needs_download'); }
       } catch {
         if (!cancelled) setGateState('needs_download');
       }
@@ -259,44 +263,44 @@ export function ModelDownloadGate({ modelIds, onReady, accentColor = '#6366F1' }
       Animated.sequence([
         Animated.timing(successAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
         Animated.delay(2000),
-      ]).start(() => {
-        setGateState('ready');
-        onReady();
-      });
+      ]).start(() => { setGateState('ready'); onReady(); });
     }
   }, [gateState]);
 
   // ── Download handler ──────────────────────────────────────────────────────
   const handleDownload = useCallback(async () => {
-    // Only download models that have a spec AND a downloadable URL on this platform
-    const validIds = modelIds.filter(id => {
-      const spec = MODEL_SPECS[id];
-      if (!spec) return false;
-      return isDownloadableOnCurrentPlatform(spec.downloadUrl);
-    });
-    if (validIds.length === 0) { setGateState('ready'); onReady(); return; }
+    const validRequired = validFor(modelIds);
+    const validOptional = validFor(optionalModelIds);
+
+    // If no required models need downloading, open immediately
+    if (validRequired.length === 0) { setGateState('ready'); onReady(); return; }
 
     setGateState('downloading');
     setError(null);
     abortRef.current = new AbortController();
     const signal = abortRef.current.signal;
 
-    let downloaded = 0;
-    for (const modelId of validIds) {
+    // ── Download required models first — any failure blocks the gate ─────
+    let downloadedCount = 0;
+    const allIds = [...validRequired, ...validOptional];
+
+    for (const modelId of allIds) {
       if (signal.aborted) break;
 
       const spec = MODEL_SPECS[modelId];
       if (!spec) continue;
 
+      const isOptional = !validRequired.includes(modelId);
+
       // Skip if already cached
       const alreadyCached = await modelDownloadService.isModelCached(modelId);
-      if (alreadyCached) { downloaded++; continue; }
+      if (alreadyCached) { downloadedCount++; continue; }
 
       setDlState({
         progress: null,
-        currentModelName: spec.name,
-        currentIndex: downloaded,
-        totalModels: validIds.length,
+        currentModelName: spec.name + (isOptional ? ' (optional)' : ''),
+        currentIndex: downloadedCount,
+        totalModels: allIds.length,
       });
 
       try {
@@ -304,22 +308,26 @@ export function ModelDownloadGate({ modelIds, onReady, accentColor = '#6366F1' }
           modelId,
           spec.downloadUrl,
           spec.sizeBytes,
-          (p) => {
-            if (!signal.aborted) {
-              setDlState(prev => ({ ...prev, progress: p }));
-            }
-          },
+          (p) => { if (!signal.aborted) setDlState(prev => ({ ...prev, progress: p })); },
           signal,
         );
-        downloaded++;
+        downloadedCount++;
       } catch (e: any) {
         if (e instanceof ModelDownloadCancelledError || signal.aborted) {
           setGateState('needs_download');
           setError('Download cancelled.');
           return;
         }
+        if (isOptional) {
+          // Optional model failed (e.g. 404 — file not hosted yet): skip silently.
+          const modelName = spec.name;
+          console.warn(`[ModelDownloadGate] Optional model ${modelId} skipped: ${e?.message ?? e}`);
+          // Show a brief non-blocking notice, but don't stop the loop
+          setDlState(prev => ({ ...prev, currentModelName: `${modelName} — skipped (not available)` }));
+          continue;
+        }
         // Required model failed — keep gate closed and show actionable error.
-        const modelName = MODEL_SPECS[modelId]?.name ?? modelId;
+        const modelName = spec.name;
         const detail    = e?.message ? `: ${e.message}` : '';
         console.error(`[ModelDownloadGate] Required model ${modelId} failed${detail}`);
         setGateState('needs_download');
@@ -330,26 +338,18 @@ export function ModelDownloadGate({ modelIds, onReady, accentColor = '#6366F1' }
 
     if (signal.aborted) return;
 
-    // Final verification — confirm every required model is actually cached before
-    // declaring success. This catches silent integrity failures or partial writes.
-    const verifyChecks = await Promise.all(
-      validIds.map(id => modelDownloadService.isModelCached(id)),
-    );
-    const uncachedIds = validIds.filter((_, i) => !verifyChecks[i]);
+    // Final verification — only required models must be cached to declare success.
+    const verifyChecks = await Promise.all(validRequired.map(id => modelDownloadService.isModelCached(id)));
+    const uncachedIds  = validRequired.filter((_, i) => !verifyChecks[i]);
     if (uncachedIds.length > 0) {
-      const uncachedNames = uncachedIds
-        .map(id => MODEL_SPECS[id]?.name ?? id)
-        .join(', ');
+      const uncachedNames = uncachedIds.map(id => MODEL_SPECS[id]?.name ?? id).join(', ');
       setGateState('needs_download');
-      setError(
-        `Model verification failed for: ${uncachedNames}. ` +
-        'The download may have been interrupted. Please try again.',
-      );
+      setError(`Model verification failed for: ${uncachedNames}. The download may have been interrupted. Please try again.`);
       return;
     }
 
     setGateState('success');
-  }, [modelIds, onReady]);
+  }, [modelIds, optionalModelIds, onReady]);
 
   const handleCancel = useCallback(() => {
     abortRef.current?.abort();
@@ -390,12 +390,10 @@ export function ModelDownloadGate({ modelIds, onReady, accentColor = '#6366F1' }
   }
 
   // ── Shared: model list for needs_download and downloading ─────────────────
-  const validIds  = modelIds.filter(id => {
-    const spec = MODEL_SPECS[id];
-    if (!spec) return false;
-    return isDownloadableOnCurrentPlatform(spec.downloadUrl);
-  });
-  const totalSize = validIds.reduce((s, id) => s + (MODEL_SPECS[id]?.sizeBytes ?? 0), 0);
+  const validRequired = validFor(modelIds);
+  const validOptional = validFor(optionalModelIds);
+  const allValidIds   = [...validRequired, ...validOptional];
+  const totalSize     = allValidIds.reduce((s, id) => s + (MODEL_SPECS[id]?.sizeBytes ?? 0), 0);
 
   // ── Render: needs_download ────────────────────────────────────────────────
   if (gateState === 'needs_download') {
@@ -413,27 +411,6 @@ export function ModelDownloadGate({ modelIds, onReady, accentColor = '#6366F1' }
             </Text>
           </View>
         </View>
-
-        {/* Model list */}
-        {validIds.map(id => {
-          const spec = MODEL_SPECS[id]!;
-          return (
-            <View key={id} style={[styles.modelRow, { borderColor: colors.border }]}>
-              <MaterialCommunityIcons name="brain" size={14} color={accentColor} />
-              <View style={styles.modelInfo}>
-                <Text style={[styles.modelName, { color: colors.foreground, fontFamily: 'Inter_600SemiBold' }]}>
-                  {spec.name}
-                </Text>
-                <Text style={[styles.modelDesc, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-                  {spec.description}
-                </Text>
-              </View>
-              <Text style={[styles.modelSize, { color: accentColor, fontFamily: 'Inter_600SemiBold' }]}>
-                {fmtBytes(spec.sizeBytes)}
-              </Text>
-            </View>
-          );
-        })}
 
         {/* Storage requirement */}
         <View style={[styles.storageRow, { backgroundColor: accentColor + '0D', borderRadius: 8 }]}>

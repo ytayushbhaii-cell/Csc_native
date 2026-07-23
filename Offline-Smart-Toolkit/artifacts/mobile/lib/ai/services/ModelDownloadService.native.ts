@@ -6,6 +6,12 @@
  *  • Works offline after download
  *
  * Download: FileSystem.createDownloadResumable with progress callback.
+ *  • Resume support: when a download is interrupted, the resumable snapshot
+ *    is saved to a `.partial.json` sidecar file. On the next call to
+ *    downloadModel() the snapshot is loaded and the download continues from
+ *    the byte offset where it stopped — no need to restart from 0%.
+ *  • On cancellation the snapshot is saved (not discarded) so the next
+ *    attempt can continue seamlessly.
  *
  * ORT integration: getModelData() returns a file URI string that
  * onnxruntime-react-native InferenceSession.create() accepts directly.
@@ -42,6 +48,11 @@ function metaPath(cacheDir: string, modelId: string): string {
 
 function modelPath(cacheDir: string, modelId: string): string {
   return `${cacheDir}ai-models/${safeModelId(modelId)}.onnx`;
+}
+
+/** Sidecar file that stores the DownloadResumable snapshot for interrupted downloads. */
+function partialPath(cacheDir: string, modelId: string): string {
+  return `${cacheDir}ai-models/${safeModelId(modelId)}.partial.json`;
 }
 
 class NativeModelDownloadService implements IModelDownloadService {
@@ -98,10 +109,38 @@ class NativeModelDownloadService implements IModelDownloadService {
     const fs   = await getFS();
     const base = await this.ensureDir();
     const dest = modelPath(base, modelId);
+    const snap = partialPath(base, modelId);
 
-    // Remove any partial file
-    const partial = await fs.getInfoAsync(dest);
-    if (partial.exists) await fs.deleteAsync(dest, { idempotent: true });
+    // ── Resume support: load saved snapshot if available ─────────────────────
+    let savedSnapshot: string | undefined;
+    try {
+      const snapInfo = await fs.getInfoAsync(snap);
+      if (snapInfo.exists) {
+        const raw = await fs.readAsStringAsync(snap);
+        // Validate the snapshot is non-empty JSON before using it
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') {
+          // Snapshot exists AND the partial file must also exist to resume
+          const partialInfo = await fs.getInfoAsync(dest);
+          if (partialInfo.exists && (partialInfo.size ?? 0) > 0) {
+            savedSnapshot = raw;
+            console.info(`[NativeDownload] Resuming ${modelId} from ${partialInfo.size} bytes`);
+          }
+        }
+      }
+    } catch {
+      // If snapshot load fails, start fresh (snapshot file may be corrupt)
+      savedSnapshot = undefined;
+    }
+
+    // If there is no valid snapshot, ensure no stale partial file exists
+    if (!savedSnapshot) {
+      const partial = await fs.getInfoAsync(dest);
+      if (partial.exists) await fs.deleteAsync(dest, { idempotent: true });
+      // Also clean up any stale snapshot sidecar
+      const snapInfo = await fs.getInfoAsync(snap);
+      if (snapInfo.exists) await fs.deleteAsync(snap, { idempotent: true });
+    }
 
     const startTime = Date.now();
 
@@ -118,32 +157,54 @@ class NativeModelDownloadService implements IModelDownloadService {
         onProgress?.({
           percentage:      total > 0 ? Math.min(100, (dl / total) * 100) : 0,
           bytesDownloaded: dl,
-          totalBytes:      total,
+          totalBytes:      total > 0 ? total : expectedBytes,
           speedMBps:       speedBps / (1024 * 1024),
           etaSeconds:      speedBps > 0 ? remaining / speedBps : 0,
         });
       },
+      savedSnapshot, // pass snapshot to resume if available
     );
 
-    // Wire abort signal
+    // Wire abort signal: pause and save snapshot so next attempt can resume
+    let wasCancelled = false;
     signal?.addEventListener('abort', () => {
-      downloadResumable.cancelAsync().catch(() => {});
+      wasCancelled = true;
+      downloadResumable.pauseAsync()
+        .then(async (pauseState: { resumeData?: string } | null | undefined) => {
+          if (pauseState?.resumeData) {
+            // Save snapshot for next resume attempt
+            await fs.writeAsStringAsync(snap, pauseState.resumeData).catch(() => {});
+            console.info(`[NativeDownload] Paused ${modelId} — snapshot saved for resume`);
+          } else {
+            // No resume data: fall back to cancel
+            await downloadResumable.cancelAsync().catch(() => {});
+          }
+        })
+        .catch(() => {
+          downloadResumable.cancelAsync().catch(() => {});
+        });
     });
 
     let result: { uri: string } | null;
     try {
       result = await downloadResumable.downloadAsync();
     } catch (e: any) {
-      if (signal?.aborted || e?.message?.includes('cancelled')) {
+      if (wasCancelled || signal?.aborted || e?.message?.includes('cancelled')) {
         throw new ModelDownloadCancelledError();
       }
+      // Download failed mid-way — clean up partial & snapshot so next attempt starts fresh
+      await fs.deleteAsync(dest, { idempotent: true }).catch(() => {});
+      await fs.deleteAsync(snap, { idempotent: true }).catch(() => {});
       throw new ModelDownloadError(`Download failed for ${modelId}: ${e?.message ?? e}`);
     }
 
     if (!result) {
-      if (signal?.aborted) throw new ModelDownloadCancelledError();
+      if (signal?.aborted || wasCancelled) throw new ModelDownloadCancelledError();
       throw new ModelDownloadError(`Download returned null for ${modelId}`);
     }
+
+    // ── Download complete: remove snapshot sidecar ────────────────────────────
+    await fs.deleteAsync(snap, { idempotent: true }).catch(() => {});
 
     // Integrity check
     const info = await fs.getInfoAsync(dest);
@@ -169,6 +230,8 @@ class NativeModelDownloadService implements IModelDownloadService {
       const base = await this.ensureDir();
       await fs.deleteAsync(modelPath(base, modelId), { idempotent: true });
       await fs.deleteAsync(metaPath(base, modelId), { idempotent: true });
+      // Also remove any leftover resume snapshot
+      await fs.deleteAsync(partialPath(base, modelId), { idempotent: true });
     } catch { /* ignore */ }
   }
 

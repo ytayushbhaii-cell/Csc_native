@@ -82,14 +82,20 @@ const HD_STEPS = [
   { id: 'encode',  label: 'Generating HD Transparent PNG…' },
 ];
 
-// ─── Required models for the download gate ────────────────────────────────────
-// birefnet: primary high-quality model
-// u2net:    compact fallback — always downloaded as a safety net
+// ─── Models for the download gate ─────────────────────────────────────────────
+// Required: gate stays closed until these are cached.
+//   birefnet — Primary high-quality segmentation (44 MB, public HuggingFace URL)
+//   u2net    — Compact fast fallback (4.4 MB, public GitHub URL)
 //
-// ben2 and rmbg2 are OPTIONAL — the pipeline handles them gracefully when absent:
-//  • BEN2Backend falls back to CPU refinement if ben2.onnx is not cached
-//  • RMBG-2.0 is skipped silently if not cached (u2net takes its place)
+// Optional: attempted after required ones but silently skipped if unavailable
+// (e.g. model file not hosted yet, 404, or no CSC_*_MODEL_URL set on native).
+// The pipeline degrades gracefully — BEN2 falls back to CPU refinement,
+// RMBG-2.0/IS-Net are replaced by U2Net in the fallback chain.
+//   ben2  — BEN2 hair & edge sub-pixel refinement (180 MB)
+//   rmbg2 — RMBG-2.0 high-quality fallback (90 MB)
+//   isnet — IS-Net for complex scenes (176 MB)
 const REQUIRED_MODEL_IDS = ['birefnet', 'u2net'];
+const OPTIONAL_MODEL_IDS = ['ben2', 'rmbg2', 'isnet'];
 
 // ─── Export format type ───────────────────────────────────────────────────────
 type ExportFormat = 'png' | 'jpg' | 'webp';
@@ -297,6 +303,7 @@ export function BackgroundSwapScreen({
       {!modelsReady && (
         <ModelDownloadGate
           modelIds={REQUIRED_MODEL_IDS}
+          optionalModelIds={OPTIONAL_MODEL_IDS}
           onReady={() => setModelsReady(true)}
           accentColor={color}
         />

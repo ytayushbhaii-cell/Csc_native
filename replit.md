@@ -1,70 +1,80 @@
-# CSC Smart Toolkit — Offline-Smart-Toolkit
+# CSC Smart Toolkit
 
-## Project Overview
+A professional offline-first mobile toolkit built with React Native CLI + react-native-web.  
+94+ tools — all on-device, no cloud, no internet required after setup.
 
-A React Native offline toolkit app ("CSC Smart Toolkit") with 94+ tools for photo editing, document processing, QR codes, signatures, ID cards, and more. The app runs on Android natively and in the browser via react-native-web + webpack.
-
-## Stack
-
-- **Mobile**: React Native CLI (0.81.5) + React 19
-- **Web preview**: react-native-web + webpack 5 (`webpack serve`)
-- **AI / ML**: ONNX Runtime Web (`onnxruntime-web`) for background removal models
-- **Package manager**: pnpm workspaces (`Offline-Smart-Toolkit/`)
-- **Navigation**: React Navigation v7 (Stack)
-
-## How to run
+## How to run (web preview)
 
 ```bash
-# Install dependencies (pnpm workspace root)
-cd Offline-Smart-Toolkit && pnpm install
-
-# Start the webpack dev server (web preview)
 cd Offline-Smart-Toolkit/artifacts/mobile && pnpm exec webpack serve --config webpack.config.js
 ```
 
-The dev server listens on port 5000.
+The **Start application** workflow runs this automatically. App is served at port 5000.
 
-## Background Remover AI Pipeline
+## Stack
 
-The Background Remove tool (`app/photo-tools/background-remove.tsx`) uses a multi-model ONNX pipeline:
+| Layer | Tech |
+|---|---|
+| UI framework | React Native CLI 0.81 + react-native-web |
+| Bundler (web preview) | Webpack 5 |
+| Navigation | React Navigation 7 (Stack) |
+| AI inference | ONNX Runtime Web (WASM) + onnxruntime-react-native |
+| AI post-processing | Pure TypeScript — zero native deps |
+| Fonts | Inter (Google Fonts) |
+| Icons | MaterialCommunityIcons via react-native-vector-icons |
 
-**High-end devices (≥6 GB RAM):**
-BiRefNet → BEN2 Hair Refinement → PyMatting Quad-pass Guided Filter → Alpha Matte Refinement
+## Project layout
 
-**Mid-range devices (≥4 GB RAM):**
-BiRefNet → PyMatting Guided Filter → Alpha Matte Refinement
+```
+Offline-Smart-Toolkit/         pnpm workspace root
+├── artifacts/mobile/          React Native app (main app)
+│   ├── App.tsx                Entry point
+│   ├── navigation/            AppNavigator + routes
+│   ├── app/                   Screen files (Expo-style flat layout)
+│   ├── components/            Shared UI components
+│   ├── lib/                   Business logic & services
+│   │   ├── ai/                AI pipeline (ONNX, alphaMatte, BEN2…)
+│   │   └── photoTools/        Photo tool utilities
+│   └── public/                Static assets served by webpack
+│       └── models/            ONNX model files (large — not bundled in APK)
+└── artifacts/api-server/      Express API server (optional companion)
+```
 
-**Low-end devices (<4 GB RAM):**
-U2Net-Portrait → PyMatting Guided Filter → Alpha Matte Refinement
+## Background Remover AI pipeline
 
-**Fallback (RMBG-2.0):** Used when BiRefNet unavailable or device has insufficient RAM.
+The Background Remover Tool uses a professional multi-stage AI pipeline:
 
-### Key AI files
-- `lib/ai/services/SegmentationService.ts` — main pipeline orchestration
-- `lib/ai/services/onnxBackend.ts` — ONNX model loading + inference
-- `lib/ai/services/BEN2Backend.ts` — BEN2 hair refinement pass
-- `lib/ai/services/ImageRouter.ts` — device-aware model routing
-- `lib/ai/services/DeviceCapability.ts` — RAM/GPU/SIMD detection
-- `lib/ai/processors/alphaMatte.ts` — PyMatting-equivalent guided filter + post-processing
-- `lib/ai/processors/guidedFilter.ts` — Quad-pass guided filter (PyMatting equivalent)
-- `lib/ai/ModelRegistry.ts` — model status registry
+**Primary (high-end ≥6 GB RAM):** BiRefNet → BEN2 Hair Refinement → PyMatting Guided Filter → Alpha Matte  
+**Mid-end (4–6 GB):** BiRefNet → PyMatting Guided Filter → Alpha Matte  
+**Low-end (<4 GB):** RMBG-2.0 → U2Net fallback → Alpha Matte  
 
-### Model download system
-- `lib/ai/services/ModelDownloadService.web.ts` — IndexedDB storage (web)
-- `lib/ai/services/ModelDownloadService.native.ts` — expo-file-system storage (Android)
-- `components/photo-tools/ModelDownloadGate.tsx` — download UI with %, speed, ETA, retry
+All pipeline stages:
+1. EXIF orientation correction
+2. Full-resolution image decode (Canvas API)
+3. Image analysis & intelligent model routing (DeviceCapability + ImageRouter)
+4. Low-light auto-enhancement on inference copy
+5. Multi-model ONNX inference (BiRefNet → RMBG-2.0 → U2Net → IS-Net priority)
+6. BEN2 boundary refinement (when available + device has ≥6 GB RAM)
+7. Professional alpha matting — hole fill → SAM2 trimap → quad-pass guided filter → hair pass
+8. Halo removal & color decontamination
+9. Composite at original resolution → lossless PNG
 
-### Post-processing (all platforms)
-- Alpha matte hole fill → SAM2-style trimap → Quad-pass guided filter → Hair refinement pass → Edge feathering → Halo removal
+**Model files required (downloaded once, stored offline forever):**
+- `birefnet-q.onnx` — ~44 MB (BiRefNet quantized, primary)
+- `u2netp.onnx` — ~4.4 MB (U2Net, compact fallback)
+- `rmbg-2.0.onnx` — ~90 MB (optional, mid-quality fallback)
+- `ben2.onnx` — ~180 MB (optional, hair refinement)
+- `isnet-general.onnx` — ~176 MB (optional, complex scenes)
 
-### Export formats
-- Transparent PNG (default), JPG (white background), WEBP
-- Custom background color (hex input)
-- High-resolution export preserving original image dimensions
+Models are downloaded via `ModelDownloadGate` with real-time progress, resume support, and integrity verification. On web: stored in IndexedDB. On native Android: stored in `expo-file-system` cache directory.
 
-## User Preferences
+## Android build
 
-- Preserve existing UI/UX — do not redesign screens, change colors, icons, layouts, or animations.
-- Upgrade AI engines and add functional features only.
-- Zero critical errors required before shipping.
-- 100% offline after AI model download.
+Requires Android SDK + JDK. Not available in this Replit environment.
+To build: `cd Offline-Smart-Toolkit/artifacts/mobile/android && ./gradlew assembleRelease`
+
+## User preferences
+
+- Preserve existing UI/UX when upgrading features — do not redesign screens.
+- Keep APK size minimal — ONNX models are downloaded on-demand, never bundled.
+- 100% offline operation after setup — no cloud, no API dependencies.
