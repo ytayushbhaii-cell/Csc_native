@@ -12,6 +12,7 @@ import {
 } from '@/lib/phase6/Phase6FileService';
 import { addPhase6History } from '@/lib/phase6/Phase6History';
 import { getDefaultFolder } from '@/lib/features/settings/SettingsService';
+import { manipulateAsync, SaveFormat } from '@/shims/expo-image-manipulator';
 // @ts-ignore - upng-js has no types
 import UPNG from 'upng-js';
 
@@ -38,9 +39,9 @@ export async function writeBase64Image(base64: string, ext: 'png' | 'jpg' | 'web
 /**
  * Convert an existing image URI to WEBP format.
  * On web, uses Canvas toDataURL('image/webp') — all modern browsers support it.
- * On native, uses expo-image-manipulator with SaveFormat.WEBP when available;
- * falls back to JPEG and labels the file .jpg so the extension always matches
- * the actual byte content.
+ * On native, uses the React Native image-resizer adapter exposed by the
+ * internal image-manipulation shim. The returned extension always matches the
+ * encoded bytes.
  *
  * Returns { uri, ext } so callers can use the correct file extension.
  */
@@ -67,7 +68,14 @@ export async function convertToWebP(
   }
 
   if (/\.webp(?:$|\?)/i.test(uri)) return { uri, ext: 'webp' };
-  throw new Error('Native WEBP conversion requires a WEBP source image. Choose WEBP output only for WEBP inputs.');
+  const result = await manipulateAsync(uri, [], {
+    compress: quality,
+    format: SaveFormat.WEBP,
+  });
+  if (!result.uri || result.uri === uri) {
+    throw new Error('Native WEBP conversion is unavailable in this build.');
+  }
+  return { uri: result.uri, ext: 'webp' };
 }
 
 export function guessFileName(prefix: string, ext: string): string {

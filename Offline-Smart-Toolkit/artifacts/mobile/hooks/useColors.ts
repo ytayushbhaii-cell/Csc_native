@@ -121,6 +121,66 @@ const THEMES: Record<string, ThemeColors> = {
     accentForeground:  '#A78BFA',
     radius:            12,
   },
+
+  // 7. Rose Blush (soft light)
+  rose: {
+    background:        '#FFF7FA',
+    card:              '#FFFFFF',
+    border:            '#FBCFE8',
+    foreground:        '#4A102A',
+    primary:           '#DB2777',
+    primaryForeground: '#FFFFFF',
+    muted:             '#FCE7F3',
+    mutedForeground:   '#9D174D',
+    accent:            '#FDF2F8',
+    accentForeground:  '#BE185D',
+    radius:            12,
+  },
+
+  // 8. Slate Professional (dark neutral)
+  slate: {
+    background:        '#111827',
+    card:              '#1F2937',
+    border:            '#374151',
+    foreground:        '#F9FAFB',
+    primary:           '#94A3B8',
+    primaryForeground: '#0F172A',
+    muted:             '#1F2937',
+    mutedForeground:   '#CBD5E1',
+    accent:            '#273449',
+    accentForeground:  '#E2E8F0',
+    radius:            12,
+  },
+
+  // 9. High Contrast (accessibility focused)
+  contrast: {
+    background:        '#FFFFFF',
+    card:              '#FFFFFF',
+    border:            '#111827',
+    foreground:        '#000000',
+    primary:           '#111827',
+    primaryForeground: '#FFFFFF',
+    muted:             '#F3F4F6',
+    mutedForeground:   '#374151',
+    accent:            '#FEF08A',
+    accentForeground:  '#000000',
+    radius:            8,
+  },
+
+  // 10. Mint Fresh (calm light)
+  mint: {
+    background:        '#F3FFFB',
+    card:              '#FFFFFF',
+    border:            '#A7F3D0',
+    foreground:        '#052E2B',
+    primary:           '#0F766E',
+    primaryForeground: '#FFFFFF',
+    muted:             '#ECFDF5',
+    mutedForeground:   '#0F766E',
+    accent:            '#CCFBF1',
+    accentForeground:  '#115E59',
+    radius:            12,
+  },
 };
 
 // ── Theme metadata list (ordered for the picker) ──────────────────────────────
@@ -178,6 +238,42 @@ export const ALL_THEMES: ThemeMeta[] = [
     description: 'Rich violet — striking dark theme for night owls',
     isDark:      true,
     swatches:    ['#8B5CF6', '#0E0720'],
+  },
+  {
+    id:          'rose',
+    name:        'Rose Blush',
+    nameHi:      'रोज़ ब्लश',
+    icon:        'flower-outline',
+    description: 'Soft pink accents with a warm, friendly feel',
+    isDark:      false,
+    swatches:    ['#DB2777', '#FFF7FA'],
+  },
+  {
+    id:          'slate',
+    name:        'Slate',
+    nameHi:      'स्लेट',
+    icon:        'layers-outline',
+    description: 'Professional neutral tones for focused work',
+    isDark:      true,
+    swatches:    ['#94A3B8', '#111827'],
+  },
+  {
+    id:          'contrast',
+    name:        'High Contrast',
+    nameHi:      'हाई कॉन्ट्रास्ट',
+    icon:        'contrast-box',
+    description: 'Maximum clarity with strong readable contrast',
+    isDark:      false,
+    swatches:    ['#111827', '#FFFFFF'],
+  },
+  {
+    id:          'mint',
+    name:        'Mint Fresh',
+    nameHi:      'मिंट फ्रेश',
+    icon:        'leaf',
+    description: 'Calm teal and mint tones for a fresh workspace',
+    isDark:      false,
+    swatches:    ['#0F766E', '#F3FFFB'],
   },
 ];
 

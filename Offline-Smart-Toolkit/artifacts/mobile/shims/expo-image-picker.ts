@@ -39,10 +39,9 @@ export interface ImagePickerAsset {
   exif?:     Record<string, any> | null;
 }
 
-export interface ImagePickerResult {
-  canceled: boolean;
-  assets:   ImagePickerAsset[] | null;
-}
+export type ImagePickerResult =
+  | { canceled: true; assets: null }
+  | { canceled: false; assets: ImagePickerAsset[] };
 
 export interface ImagePickerOptions {
   mediaTypes?:        string | string[];
@@ -53,6 +52,7 @@ export interface ImagePickerOptions {
   allowsMultipleSelection?: boolean;
   exif?:              boolean;
   preferredAssetRepresentationMode?: string;
+  selectionLimit?: number;
 }
 
 let _RNImagePicker: any = null;

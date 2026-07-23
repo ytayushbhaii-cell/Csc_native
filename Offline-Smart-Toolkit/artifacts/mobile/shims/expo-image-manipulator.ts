@@ -10,6 +10,7 @@
  * the full type surface used by this codebase.
  */
 import RNFS from 'react-native-fs';
+import { Image } from 'react-native';
 
 // ── Public types (match expo-image-manipulator exactly) ───────────────────────
 export const SaveFormat = {
@@ -46,7 +47,7 @@ export interface SaveOptions {
 }
 
 // ── Lazy module loaders ───────────────────────────────────────────────────────
-let _ImageEditor: any = null;
+let _ImageEditor: any;
 function getImageEditor() {
   if (_ImageEditor !== undefined) return _ImageEditor;
   try {
@@ -56,7 +57,7 @@ function getImageEditor() {
   return _ImageEditor;
 }
 
-let _ImageResizer: any = null;
+let _ImageResizer: any;
 function getImageResizer() {
   if (_ImageResizer !== undefined) return _ImageResizer;
   try {
@@ -64,6 +65,47 @@ function getImageResizer() {
     _ImageResizer = mod.default ?? mod;
   } catch { _ImageResizer = null; }
   return _ImageResizer;
+}
+
+function getImageSize(uri: string): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    Image.getSize(uri, (width, height) => resolve({ width, height }), reject);
+  });
+}
+
+async function encodeImage(
+  uri: string,
+  saveOptions: SaveOptions,
+): Promise<ImageResult> {
+  const ImageResizer = getImageResizer();
+  if (!ImageResizer?.createResizedImage) {
+    throw new Error('Native image encoding is unavailable in this build.');
+  }
+  const { width, height } = await getImageSize(uri);
+  const format = saveOptions.format === SaveFormat.PNG
+    ? 'PNG'
+    : saveOptions.format === SaveFormat.WEBP
+      ? 'WEBP'
+      : 'JPEG';
+  const quality = Math.round((saveOptions.compress ?? 0.92) * 100);
+  const result = await ImageResizer.createResizedImage(
+    uri,
+    width,
+    height,
+    format,
+    quality,
+  );
+  const output: ImageResult = {
+    uri: result.uri,
+    width: result.width ?? width,
+    height: result.height ?? height,
+  };
+  if (saveOptions.base64 && output.uri && !output.uri.startsWith('data:')) {
+    try {
+      output.base64 = await RNFS.readFile(output.uri.replace(/^file:\/\//, ''), 'base64');
+    } catch { /* best-effort */ }
+  }
+  return output;
 }
 
 // ── Crop / resize via ImageEditor ─────────────────────────────────────────────
@@ -161,7 +203,14 @@ export async function manipulateAsync(
     }
   }
 
-  if (saveOptions.base64 && current.uri && !current.uri.startsWith('data:')) {
+  // Expo's manipulateAsync always applies the requested output format, even
+  // when there are no pixel actions. Do the same for the CLI adapter so
+  // converters and export tools never return mislabeled source bytes.
+  if (saveOptions.format) {
+    current = await encodeImage(current.uri, saveOptions);
+  }
+
+  if (saveOptions.base64 && current.uri && !current.uri.startsWith('data:') && !current.base64) {
     try {
       const b64 = await RNFS.readFile(current.uri.replace(/^file:\/\//, ''), 'base64');
       current.base64 = b64;

@@ -64,7 +64,7 @@ const MODEL_CONFIGS: Record<OnnxModelId, ModelConfig> = {
     id: 'birefnet',
     name: 'BiRefNet',
     publicPath: '/models/birefnet-q.onnx',
-    urlEnvVar: 'EXPO_PUBLIC_BIREFNET_MODEL_URL',
+    urlEnvVar: 'CSC_BIREFNET_MODEL_URL',
     inputSize: 1024,
     mean: [0, 0, 0],
     std:  [1, 1, 1],
@@ -76,7 +76,7 @@ const MODEL_CONFIGS: Record<OnnxModelId, ModelConfig> = {
     id: 'rmbg2',
     name: 'RMBG-2.0',
     publicPath: '/models/rmbg-2.0.onnx',
-    urlEnvVar: 'EXPO_PUBLIC_RMBG2_MODEL_URL',
+    urlEnvVar: 'CSC_RMBG2_MODEL_URL',
     inputSize: 1024,
     mean: [0.5, 0.5, 0.5],
     std:  [1.0, 1.0, 1.0],
@@ -88,7 +88,7 @@ const MODEL_CONFIGS: Record<OnnxModelId, ModelConfig> = {
     id: 'u2net',
     name: 'U2Net',
     publicPath: '/models/u2netp.onnx',
-    urlEnvVar: 'EXPO_PUBLIC_U2NET_MODEL_URL',
+    urlEnvVar: 'CSC_U2NET_MODEL_URL',
     inputSize: 320,
     mean: [0.485, 0.456, 0.406],
     std:  [0.229, 0.224, 0.225],
@@ -100,7 +100,7 @@ const MODEL_CONFIGS: Record<OnnxModelId, ModelConfig> = {
     id: 'isnet',
     name: 'IS-Net',
     publicPath: '/models/isnet-general.onnx',
-    urlEnvVar: 'EXPO_PUBLIC_ISNET_MODEL_URL',
+    urlEnvVar: 'CSC_ISNET_MODEL_URL',
     inputSize: 1024,
     mean: [0.5, 0.5, 0.5],
     std:  [1.0, 1.0, 1.0],
@@ -147,7 +147,7 @@ function getModelUrl(cfg: ModelConfig): string {
 }
 
 function getWasmDir(): string {
-  const override = envStr('EXPO_PUBLIC_ORT_WASM_DIR');
+  const override = envStr('CSC_ORT_WASM_DIR');
   if (override) return override.endsWith('/') ? override : override + '/';
   if (typeof window !== 'undefined') return `${window.location.origin}/ort-wasm/`;
   return '/ort-wasm/';

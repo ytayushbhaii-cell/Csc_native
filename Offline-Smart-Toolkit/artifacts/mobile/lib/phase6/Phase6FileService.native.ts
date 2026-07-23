@@ -24,15 +24,26 @@ function mimeFor(fileName: string): string {
   return MIME[fileName.toLowerCase().split('.').pop() ?? ''] ?? 'application/octet-stream';
 }
 function cleanUri(uri: string): string { return uri.replace(/^file:\/\//, ''); }
+function safeFileName(fileName: string, fallback = 'export'): string {
+  const cleaned = fileName
+    .replace(/[\\/:*?"<>|]/g, '_')
+    .replace(/\.\.+/g, '.')
+    .trim();
+  return cleaned || fallback;
+}
+function safePath(directory: string, fileName: string): string {
+  const destination = `${directory}/${safeFileName(fileName)}`;
+  const normalizedDirectory = directory.endsWith('/') ? directory : `${directory}/`;
+  if (!destination.startsWith(normalizedDirectory)) {
+    throw new Error('Invalid destination file name.');
+  }
+  return destination;
+}
 function pathFor(folder: OutputFolder): string {
   if (folder === 'pictures') return RNFS.PicturesDirectoryPath;
   if (folder === 'documents') return `${RNFS.ExternalStorageDirectoryPath}/Documents`;
   return RNFS.DownloadDirectoryPath;
 }
-function uniquePath(directory: string, fileName: string): string {
-  return `${directory}/${fileName.replace(/[\\/:*?"<>|]/g, '_')}`;
-}
-
 export async function ensurePhase6Directories(): Promise<void> {
   await Promise.all([
     RNFS.mkdir(RNFS.DownloadDirectoryPath),
@@ -68,7 +79,7 @@ export async function saveFile(sourceUri: string, fileName: string, folder: Outp
     size = Number((await RNFS.stat(source)).size);
   } else {
     await ensurePhase6Directories();
-    const destination = uniquePath(pathFor(folder), fileName);
+    const destination = safePath(pathFor(folder), fileName);
     if (source !== destination) await RNFS.copyFile(source, destination);
     const stat = await RNFS.stat(destination);
     uri = `file://${destination}`;
@@ -149,7 +160,8 @@ export async function renameFile(path: string, newName: string): Promise<void> {
     return;
   }
   const source = cleanUri(path);
-  await RNFS.moveFile(source, uniquePath(directoryForPath(source.substring(0, source.lastIndexOf('/'))), newName));
+  const directory = source.substring(0, source.lastIndexOf('/'));
+  await RNFS.moveFile(source, safePath(directory, newName));
 }
 export async function copyFile(path: string, destinationName: string): Promise<void> {
   if (path.startsWith('content://')) {
@@ -159,7 +171,8 @@ export async function copyFile(path: string, destinationName: string): Promise<v
     return;
   }
   const source = cleanUri(path);
-  await RNFS.copyFile(source, uniquePath(directoryForPath(source.substring(0, source.lastIndexOf('/'))), destinationName));
+  const directory = source.substring(0, source.lastIndexOf('/'));
+  await RNFS.copyFile(source, safePath(directory, destinationName));
 }
 export async function moveFile(path: string, destinationName: string): Promise<void> {
   await renameFile(path, destinationName);
@@ -191,7 +204,7 @@ export async function readFileAsBase64(uri: string): Promise<string> {
 }
 export async function writeBase64File(base64: string, fileName: string): Promise<string> {
   const directory = (RNFS as any).CachesDirectoryPath ?? RNFS.DocumentDirectoryPath;
-  const destination = uniquePath(directory, fileName);
+  const destination = safePath(directory, fileName);
   await RNFS.writeFile(destination, base64, 'base64');
   return `file://${destination}`;
 }

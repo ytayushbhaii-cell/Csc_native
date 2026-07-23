@@ -13,3 +13,4 @@
 - [BEN2 bg-removal architecture](ben2-bg-removal-arch.md) — Four-service AI upgrade: DeviceCapability + ImagePreprocessor + ImageRouter + BEN2Backend; BEN2 model files still needed at public/models/ben2.onnx.
 - [Multi-theme system](multi-theme-system.md) — themeId string replaces isDark bool; ThemeContext exposes setThemeById; useColors returns per-theme palette.
 - [Android build environment](android-build-environment.md) — JDK alone is insufficient; verify Android SDK/ANDROID_HOME before diagnosing Gradle native compile failures.
+- [React Native CLI compatibility adapters](rn-cli-compat-adapters.md) — preserve legacy screen imports through local platform adapters backed by installed CLI modules.

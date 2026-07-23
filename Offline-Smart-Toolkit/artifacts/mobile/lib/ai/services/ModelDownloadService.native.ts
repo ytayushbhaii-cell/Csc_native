@@ -1,7 +1,7 @@
 /**
  * ModelDownloadService — Native platform implementation.
  *
- * Storage: expo-file-system (`FileSystem.cacheDirectory/ai-models/`)
+ * Storage: the React Native file-system adapter (`cacheDirectory/ai-models/`)
  *  • Persists between app launches
  *  • Works offline after download
  *
@@ -22,18 +22,26 @@ import {
   ModelDownloadError,
 } from './ModelDownloadServiceTypes';
 
-// expo-file-system — dynamically imported to avoid Metro issues on web
+// The platform adapter is dynamically imported to keep this native-only
+// implementation out of the browser bundle.
 async function getFS() {
   const fs = await import('expo-file-system') as any;
   return fs;
 }
 
+function safeModelId(modelId: string): string {
+  if (!/^[a-z0-9_-]+$/i.test(modelId)) {
+    throw new ModelDownloadError(`Invalid model identifier: ${modelId}`);
+  }
+  return modelId;
+}
+
 function metaPath(cacheDir: string, modelId: string): string {
-  return `${cacheDir}ai-models/${modelId}.meta.json`;
+  return `${cacheDir}ai-models/${safeModelId(modelId)}.meta.json`;
 }
 
 function modelPath(cacheDir: string, modelId: string): string {
-  return `${cacheDir}ai-models/${modelId}.onnx`;
+  return `${cacheDir}ai-models/${safeModelId(modelId)}.onnx`;
 }
 
 class NativeModelDownloadService implements IModelDownloadService {
@@ -83,6 +91,9 @@ class NativeModelDownloadService implements IModelDownloadService {
     signal?: AbortSignal,
   ): Promise<void> {
     if (signal?.aborted) throw new ModelDownloadCancelledError();
+    if (!/^https:\/\//i.test(url)) {
+      throw new ModelDownloadError('Model downloads require an HTTPS URL.');
+    }
 
     const fs   = await getFS();
     const base = await this.ensureDir();

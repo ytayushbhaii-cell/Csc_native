@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet,
   TouchableOpacity, Platform, Alert,
@@ -27,6 +27,23 @@ export default function ThemeSettingsScreen() {
   const topPadding    = Platform.OS === 'web' ? 30 : insets.top;
   const bottomPadding = Platform.OS === 'web' ? 34 : insets.bottom;
 
+  useEffect(() => {
+    setSelected(themeId);
+  }, [themeId]);
+
+  // Theme cards apply immediately so users can preview the whole app live.
+  const handleThemeSelect = async (id: string) => {
+    setSelected(id);
+    try {
+      await setTheme(id);
+      await setThemeById(id);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch {
+      Alert.alert('Error', 'Could not save theme preference.');
+    }
+  };
+
   const handleSave = async () => {
     if (busy) return;
     setBusy(true);
@@ -43,7 +60,7 @@ export default function ThemeSettingsScreen() {
   };
 
   const handleReset = () => {
-    setSelected('light');
+    void handleThemeSelect('light');
   };
 
   return (
@@ -95,7 +112,7 @@ export default function ThemeSettingsScreen() {
               theme={theme}
               isSelected={selected === theme.id}
               isActive={themeId === theme.id}
-              onPress={() => setSelected(theme.id)}
+               onPress={() => void handleThemeSelect(theme.id)}
             />
           ))}
         </View>

@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useColorScheme } from 'react-native';
 import { getThemeMeta } from '@/hooks/useColors';
 
 interface ThemeContextType {
@@ -20,20 +19,19 @@ const ThemeContext = createContext<ThemeContextType>({
 const THEME_KEY = '@csc_toolkit_theme';
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const systemColorScheme = useColorScheme();
-  const [themeId, setThemeId] = useState<string>(
-    systemColorScheme === 'dark' ? 'dark' : 'light'
-  );
+  // Light is the explicit product default; do not silently follow device mode.
+  const [themeId, setThemeId] = useState<string>('light');
 
   useEffect(() => {
     AsyncStorage.getItem(THEME_KEY).then((value) => {
-      if (value !== null) setThemeId(value);
+      if (value !== null) setThemeId(getThemeMeta(value).id);
     });
   }, []);
 
   const setThemeById = async (id: string) => {
-    setThemeId(id);
-    await AsyncStorage.setItem(THEME_KEY, id);
+    const normalizedId = getThemeMeta(id).id;
+    setThemeId(normalizedId);
+    await AsyncStorage.setItem(THEME_KEY, normalizedId);
   };
 
   // Backward compat: toggle between light ↔ dark only

@@ -1,60 +1,51 @@
 # CSC Smart Toolkit — Mobile App
 
 ## Overview
-A 100% offline, Expo/React Native mobile application for CSC (Common Service Centre) operators, Cyber Cafes, and Photo Studios. All document processing runs on-device — no internet, no cloud, no API calls.
+A 100% offline React Native CLI mobile application for CSC (Common Service Centre) operators, Cyber Cafes, and Photo Studios. All document processing runs on-device — no internet, no cloud, no API calls.
 
 ## How to Run (Web Preview)
 ```
-cd Offline-Smart-Toolkit/artifacts/mobile && npx webpack serve --config webpack.config.js
+cd Offline-Smart-Toolkit/artifacts/mobile && pnpm exec webpack serve --config webpack.config.js
 ```
 The workflow "Start application" handles this. The app runs at http://localhost:5000 via react-native-web.
 
 > **Note**: This project was migrated from Expo Router to React Native CLI + webpack (Phase 1).
-> Navigation is handled by `navigation/AppNavigator.tsx` (React Navigation stack), with an
-> expo-router shim in `shims/expo-router.tsx` so existing screen files need no changes.
+> Navigation is handled by `navigation/AppNavigator.tsx` (React Navigation stack).
+> Local compatibility adapters in `shims/` keep the existing screen imports and UI
+> unchanged while routing all runtime work through React Native CLI modules.
 
-## Workflow: Expo Prebuild (Bare Workflow) — Android
+## Android React Native CLI
 
-The project has been migrated to **Expo Prebuild / Bare Workflow**. The `android/` directory is now committed and owned by the project. Do NOT delete it.
+The committed `android/` directory is a standard React Native CLI project. Do NOT
+delete or regenerate it with Expo tooling.
 
-### To rebuild native files after app.json plugin changes
+### To build an APK
 ```bash
 cd Offline-Smart-Toolkit/artifacts/mobile
-echo "y" | npx expo prebuild --platform android --clean --no-install
+pnpm build:apk
 ```
 
-### To build APK with EAS (recommended — uses EAS cloud builders)
+### To build an AAB
 ```bash
-# Requires EXPO_TOKEN secret set in Replit Secrets, and an Expo account
-# with the project configured (eas.json already configured)
 cd Offline-Smart-Toolkit/artifacts/mobile
-EXPO_TOKEN=$EXPO_TOKEN npx eas-cli build --platform android --profile preview --non-interactive
+pnpm build:aab
 ```
-The `preview` profile builds a signed APK (internal distribution).  
-AI models (BiRefNet ~44 MB, U2Net ~4.4 MB) are NOT bundled in the APK — they download from the internet on first use inside the app.
-
-### To build AAB (production / Play Store)
-```bash
-eas build --platform android --profile production
-```
-> Requires: `eas-cli` installed (`npm i -g eas-cli`) and an Expo account logged in.
-> Production builds use `buildType: "app-bundle"` (AAB) for Play Store.
 
 ### To run on a connected Android device (requires local Android SDK)
 ```bash
 cd Offline-Smart-Toolkit/artifacts/mobile
-pnpm android   # runs expo run:android
+pnpm android
 ```
 
 ## Stack
-- **Framework**: Expo SDK 54 + React Native 0.81 (web via Metro bundler)
-- **Navigation**: Expo Router v6 (file-based routing)
+- **Framework**: React Native CLI 0.81 (web via webpack/react-native-web)
+- **Navigation**: React Navigation v7 (flat stack)
 - **PDF**: pdf-lib (offline PDF generation, merge, split, rotate, protect)
-- **OCR**: tesseract.js v7 (web), architecture stub for native
+- **OCR**: tesseract.js v7 (web), Google ML Kit (native Android)
 - **PDF Rendering**: pdfjs-dist (web) for PDF → Image conversion
-- **Image Processing**: expo-image-manipulator
+- **Image Processing**: React Native image editor/resizer adapters
 - **State**: React Context (ThemeContext, AppContext, SettingsContext, DrawerContext)
-- **Storage**: AsyncStorage for favorites/theme/settings/search-history/usage; expo-sqlite for tool history DB
+- **Storage**: AsyncStorage and the native Phase 6 SQLite bridge
 
 ## Part 10 — Search, History & Analytics Modules (added)
 - **Search screen** (`app/(tabs)/search.tsx`) — full-page search across all tools/categories, persisted search history, instant results
@@ -70,7 +61,7 @@ pnpm android   # runs expo run:android
 ```
 Offline-Smart-Toolkit/
 ├── artifacts/
-│   └── mobile/                     # Main Expo app
+│   └── mobile/                     # Main React Native CLI app
 │       ├── app/
 │       │   ├── (tabs)/             # Dashboard, Tools, Favorites, Recent, Settings
 │       │   ├── document-tools/     # All 43 document & ID tools
@@ -139,14 +130,15 @@ Key files: `lib/ai/services/onnxBackend.ts`, `lib/ai/services/SegmentationServic
 
 ## AI Model Status (Native Android)
 
-| Model | Web (Expo Web) | Native Android |
+| Model | Web (react-native-web) | Native Android |
 |-------|---------------|----------------|
 | BiRefNet (ONNX) | ✅ Full inference via onnxruntime-web | ⚠️ Falls back to TF.js BodyPix (CPU) |
 | RMBG-2.0 (ONNX) | ✅ Full inference via onnxruntime-web | ⚠️ Falls back to TF.js BodyPix (CPU) |
 | U2Net (ONNX) | ✅ Full inference via onnxruntime-web | ⚠️ Falls back to TF.js BodyPix (CPU) |
 
-**Why**: `onnxruntime-web` uses WebAssembly (unsupported by Hermes JS engine on Android).
-**Path to fix**: Replace `ortLoader.native.ts` stub with `onnxruntime-react-native` InferenceSession — infrastructure already wired in `ModelDownloadService.native.ts`.
+**Why**: the web and native ONNX runtimes use different platform adapters. Native
+model execution is routed through `onnxruntime-react-native`; web uses the
+WASM-compatible adapter.
 
 ## Key Packages (mobile)
 - `pdf-lib` — PDF creation/manipulation (CJS build forced via metro config)
@@ -154,9 +146,9 @@ Key files: `lib/ai/services/onnxBackend.ts`, `lib/ai/services/SegmentationServic
 - `pdfjs-dist` — PDF rendering to images (web only, legacy build)
 - `@react-native-ml-kit/text-recognition` — Offline OCR on native Android (Google ML Kit, no API key)
 - `react-native-pdf-thumbnail` — PDF page rendering to images on native Android (uses Android PdfRenderer)
-- `expo-document-picker` — Pick PDF files
-- `expo-clipboard` — Copy OCR text to clipboard
-- `expo-image-manipulator` — Crop/resize/compress images
+- `react-native-document-picker` — Pick PDF files
+- `@react-native-clipboard/clipboard` — Copy OCR text to clipboard
+- `@react-native-community/image-editor` + `react-native-image-resizer` — Crop/resize/compress images
 
 ## Phase 4 — Document Tools, PDF Tools & OCR (completed)
 

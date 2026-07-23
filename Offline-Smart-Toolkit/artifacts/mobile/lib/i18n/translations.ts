@@ -3,7 +3,7 @@
 // Keys follow: section.subsection.key format.
 // Add new keys in English first, then Hindi.
 
-export type Lang = 'en' | 'hi';
+export type Lang = 'en' | 'hi' | 'mr' | 'bn' | 'ta' | 'te' | 'gu' | 'pa';
 
 const translations = {
   en: {
@@ -487,7 +487,10 @@ export type TranslationKey = keyof typeof translations.en;
 export type Translations = Record<TranslationKey, string>;
 
 export function getTranslations(lang: Lang): Translations {
-  return (translations[lang] ?? translations.en) as Translations;
+  const regional: Partial<Record<TranslationKey, string>> = {
+    ...(regionalTranslations[lang] ?? {}),
+  };
+  return { ...translations.en, ...regional, ...(lang === 'hi' ? translations.hi : {}) } as Translations;
 }
 
 export default translations;

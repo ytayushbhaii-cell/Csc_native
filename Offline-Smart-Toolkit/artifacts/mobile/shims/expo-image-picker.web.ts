@@ -38,11 +38,9 @@ export interface ImagePickerAsset {
   exif?:     Record<string, any> | null;
 }
 
-export interface ImagePickerResult {
-  canceled: boolean;
-  /** Non-null when canceled is false; null when canceled is true. */
-  assets:   ImagePickerAsset[] | null;
-}
+export type ImagePickerResult =
+  | { canceled: true; assets: null }
+  | { canceled: false; assets: ImagePickerAsset[] };
 
 // Action type used by document-scanner.tsx via ImageManipulator.Action
 // (actually from expo-image-manipulator, but kept here to prevent circular imports)
@@ -54,6 +52,7 @@ export interface ImagePickerOptions {
   quality?:           number;
   base64?:            boolean;
   allowsMultipleSelection?: boolean;
+  selectionLimit?: number;
   exif?:              boolean;
   preferredAssetRepresentationMode?: string;
 }

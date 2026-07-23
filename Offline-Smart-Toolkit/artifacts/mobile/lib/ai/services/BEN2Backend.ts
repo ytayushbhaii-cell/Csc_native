@@ -37,10 +37,10 @@ import { guidedFilterRGBA } from '../processors/guidedFilter';
 
 // ─── Model config ─────────────────────────────────────────────────────────────
 
-// On native, EXPO_PUBLIC_BEN2_MODEL_URL must be set to an HTTPS URL before EAS build.
+// On native, CSC_BEN2_MODEL_URL may point to a hosted HTTPS model copy.
 // On web, the relative path is served from the public/ folder.
 const BEN2_PUBLIC_PATH  =
-  (process.env as any).EXPO_PUBLIC_BEN2_MODEL_URL?.trim() || '/models/ben2.onnx';
+  (process.env as any).CSC_BEN2_MODEL_URL?.trim() || '/models/ben2.onnx';
 const BEN2_INPUT_SIZE   = 1024;
 const BEN2_MIN_BYTES    = 50_000_000; // 50 MB minimum to be considered valid
 const BEN2_MODEL_ID     = 'ben2';
@@ -62,7 +62,7 @@ async function getDownloadService() {
 }
 
 function getWasmDir(): string {
-  const override = (process.env as any)['EXPO_PUBLIC_ORT_WASM_DIR'];
+  const override = (process.env as any)['CSC_ORT_WASM_DIR'];
   if (override) return override.endsWith('/') ? override : override + '/';
   if (typeof window !== 'undefined') return `${window.location.origin}/ort-wasm/`;
   return '/ort-wasm/';

@@ -26,7 +26,7 @@ export async function runOcr(imageUri: string, _language = 'eng'): Promise<OcrRe
     return {
       text: `[Native OCR Error] ${msg}`,
       confidence: 0,
-      engine: 'stub',
+      engine: 'mlkit',
     };
   }
 }

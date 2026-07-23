@@ -1,0 +1,2 @@
+"use strict";(self.webpackChunk_workspace_mobile=self.webpackChunk_workspace_mobile||[]).push([[638],{44638(s,e,n){async function a(){return{status:"denied",granted:!1,canAskAgain:!1}}async function c(s){}n.d(e,{requestPermissionsAsync:()=>a,saveToLibraryAsync:()=>c})}}]);
+//# sourceMappingURL=638.bundle.js.map

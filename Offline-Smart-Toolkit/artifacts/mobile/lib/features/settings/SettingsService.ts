@@ -16,7 +16,7 @@ export const KEYS = {
 // ─── Types ───────────────────────────────────────────────────────────────────
 // ThemeValue now accepts any theme ID string (light, dark, forest, sunset, ocean, purple, …)
 export type ThemeValue        = string;
-export type LanguageValue     = 'en' | 'hi';
+export type LanguageValue     = 'en' | 'hi' | 'mr' | 'bn' | 'ta' | 'te' | 'gu' | 'pa';
 export type PrintSizeValue    = 'a4' | 'letter' | 'legal' | 'passport';
 export type DefaultFolderValue = 'downloads' | 'pictures' | 'documents' | 'custom';
 
@@ -26,6 +26,16 @@ export const DEFAULTS = {
   printSize:     'a4'         as PrintSizeValue,
   defaultFolder: 'downloads'  as DefaultFolderValue,
 };
+
+export const SUPPORTED_LANGUAGES: readonly LanguageValue[] = [
+  'en', 'hi', 'mr', 'bn', 'ta', 'te', 'gu', 'pa',
+];
+
+export function normalizeLanguage(value: unknown): LanguageValue {
+  return typeof value === 'string' && SUPPORTED_LANGUAGES.includes(value as LanguageValue)
+    ? value as LanguageValue
+    : DEFAULTS.language;
+}
 
 // ─── Generic helpers ─────────────────────────────────────────────────────────
 async function get<T>(key: string, fallback: T): Promise<T> {
@@ -51,7 +61,7 @@ export async function setTheme(v: ThemeValue): Promise<void> {
 
 // ─── Language ────────────────────────────────────────────────────────────────
 export async function getLanguage(): Promise<LanguageValue> {
-  return get<LanguageValue>(KEYS.LANGUAGE, DEFAULTS.language);
+  return normalizeLanguage(await get<unknown>(KEYS.LANGUAGE, DEFAULTS.language));
 }
 export async function setLanguage(v: LanguageValue): Promise<void> {
   return set(KEYS.LANGUAGE, v);

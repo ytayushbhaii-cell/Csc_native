@@ -57,17 +57,16 @@ interface ModelSpec {
 // All model URLs MUST be absolute HTTPS URLs for native platforms.
 //
 // Priority (highest → lowest):
-//   1. EXPO_PUBLIC_<ID>_MODEL_URL environment variable (set before EAS build)
+//   1. CSC_<ID>_MODEL_URL environment variable (set before the native build)
 //   2. Known public default URLs (only available for U2Net-Portrait 4.4 MB)
 //   3. Relative path fallback (web preview only)
 //
-// How to configure before an EAS build:
-//   Set these in your .env / eas.json environment or EAS secrets:
-//     EXPO_PUBLIC_BIREFNET_MODEL_URL   — your BiRefNet .onnx HTTPS URL (~44 MB)
-//     EXPO_PUBLIC_RMBG2_MODEL_URL      — your RMBG-2.0 .onnx HTTPS URL (~90 MB)
-//     EXPO_PUBLIC_U2NET_MODEL_URL      — your U2Net .onnx HTTPS URL (~4.4 MB)
-//     EXPO_PUBLIC_ISNET_MODEL_URL      — your IS-Net .onnx HTTPS URL (~176 MB)
-//     EXPO_PUBLIC_BEN2_MODEL_URL       — your BEN2 .onnx HTTPS URL (~180 MB)
+// Configure these in the native build environment when hosting private copies:
+//     CSC_BIREFNET_MODEL_URL   — your BiRefNet .onnx HTTPS URL (~44 MB)
+//     CSC_RMBG2_MODEL_URL      — your RMBG-2.0 .onnx HTTPS URL (~90 MB)
+//     CSC_U2NET_MODEL_URL      — your U2Net .onnx HTTPS URL (~4.4 MB)
+//     CSC_ISNET_MODEL_URL      — your IS-Net .onnx HTTPS URL (~176 MB)
+//     CSC_BEN2_MODEL_URL       — your BEN2 .onnx HTTPS URL (~180 MB)
 
 function env(key: string): string | null {
   const v = (process.env as Record<string, string | undefined>)[key];
@@ -75,7 +74,7 @@ function env(key: string): string | null {
 }
 
 function resolveModelUrl(envKey: string, publicDefault: string, relativeFallback: string): string {
-  // 1. Env var (works on all platforms — set before EAS build)
+  // 1. Environment override (works on all platforms)
   const fromEnv = env(envKey);
   if (fromEnv) return fromEnv;
   // 2. On web: use relative path — files are served from public/models/ by webpack.
@@ -99,9 +98,9 @@ const MODEL_SPECS: Record<string, ModelSpec> = {
     // This must match the real file — ModelDownloadService enforces ±5% integrity check.
     sizeBytes:   44 * 1024 * 1024,
     downloadUrl: resolveModelUrl(
-      'EXPO_PUBLIC_BIREFNET_MODEL_URL',
+      'CSC_BIREFNET_MODEL_URL',
       // Public HuggingFace mirror of the quantized BiRefNet ONNX (ZhengPeng7/BiRefNet, MIT licence).
-      // Override with EXPO_PUBLIC_BIREFNET_MODEL_URL to use your own hosted copy.
+      // Override with CSC_BIREFNET_MODEL_URL to use your own hosted copy.
       'https://huggingface.co/ZhengPeng7/BiRefNet/resolve/main/onnx/birefnet-q.onnx',
       '/models/birefnet-q.onnx',  // relative path works only in web preview
     ),
@@ -112,7 +111,7 @@ const MODEL_SPECS: Record<string, ModelSpec> = {
     description: 'Secondary refinement for hair, fur & complex edges',
     sizeBytes:   180 * 1024 * 1024,
     downloadUrl: resolveModelUrl(
-      'EXPO_PUBLIC_BEN2_MODEL_URL',
+      'CSC_BEN2_MODEL_URL',
       '',
       '/models/ben2.onnx',
     ),
@@ -123,7 +122,7 @@ const MODEL_SPECS: Record<string, ModelSpec> = {
     description: 'High-quality fallback & low-memory mode',
     sizeBytes:   90 * 1024 * 1024,
     downloadUrl: resolveModelUrl(
-      'EXPO_PUBLIC_RMBG2_MODEL_URL',
+      'CSC_RMBG2_MODEL_URL',
       '',
       '/models/rmbg-2.0.onnx',
     ),
@@ -134,7 +133,7 @@ const MODEL_SPECS: Record<string, ModelSpec> = {
     description: 'Fast 4.4 MB fallback model',
     sizeBytes:   4.4 * 1024 * 1024, // rembg u2netp.onnx ~4.4 MB; 5% tolerance in integrity check covers minor variation
     downloadUrl: resolveModelUrl(
-      'EXPO_PUBLIC_U2NET_MODEL_URL',
+      'CSC_U2NET_MODEL_URL',
       // Known public URL — available without hosting your own model file.
       // Source: github.com/danielgatis/rembg (MIT licence)
       'https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2netp.onnx',
@@ -147,7 +146,7 @@ const MODEL_SPECS: Record<string, ModelSpec> = {
     description: 'Best for complex scenes',
     sizeBytes:   176 * 1024 * 1024,
     downloadUrl: resolveModelUrl(
-      'EXPO_PUBLIC_ISNET_MODEL_URL',
+      'CSC_ISNET_MODEL_URL',
       '',
       '/models/isnet-general.onnx',
     ),

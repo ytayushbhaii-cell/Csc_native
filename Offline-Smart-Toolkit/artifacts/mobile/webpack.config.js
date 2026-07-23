@@ -3,7 +3,7 @@
  *
  * Bundles the React Native app for the browser so the actual UI renders
  * in the Replit preview pane. react-native APIs are handled by react-native-web.
- * Expo APIs are either shimmed (expo-router) or use their own web implementations.
+ * Legacy import names are mapped to local React Native CLI adapters for web.
  */
 const path              = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
@@ -31,7 +31,7 @@ const TRANSFORM_PACKAGES_LIST = [
   '@react-native-async-storage',
   '@react-native-clipboard',
   '@react-native-community',
-  // Expo packages that ship TypeScript source or ESM that needs transpilation
+  // Legacy adapter package names that ship TypeScript source or ESM.
   'expo',
   'expo-modules-core',
   'expo-file-system',
@@ -82,6 +82,7 @@ module.exports = {
     path:       path.join(projectRoot, 'dist-web'),
     filename:   'bundle.js',
     publicPath: '/',
+    clean:      true,
   },
 
   // ── Module resolution ──────────────────────────────────────────────────────

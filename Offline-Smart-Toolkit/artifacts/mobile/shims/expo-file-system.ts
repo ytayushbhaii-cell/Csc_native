@@ -84,6 +84,11 @@ export async function moveAsync(opts: { from: string; to: string }): Promise<voi
   await RNFS.moveFile(stripFileScheme(opts.from), stripFileScheme(opts.to));
 }
 
+export async function readDirectoryAsync(directoryUri: string): Promise<string[]> {
+  const entries = await RNFS.readDir(stripFileScheme(directoryUri));
+  return entries.map((entry) => entry.name);
+}
+
 // ── Download ──────────────────────────────────────────────────────────────────
 export async function downloadAsync(
   uri: string,
