@@ -15,5 +15,14 @@ extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
     ex.autolinkLibrariesFromCommand()
 }
 
+// Top-level includeBuild with dependency substitution so that older native modules
+// using `classpath("com.facebook.react:react-native-gradle-plugin")` in their own
+// buildscript blocks can resolve the library dependency via the composite build.
+includeBuild("../../../node_modules/.pnpm/@react-native+gradle-plugin@0.81.5/node_modules/@react-native/gradle-plugin") {
+    dependencySubstitution {
+        substitute(module("com.facebook.react:react-native-gradle-plugin")).using(project(":"))
+    }
+}
+
 rootProject.name = 'CSC Smart Toolkit'
 include ':app'
