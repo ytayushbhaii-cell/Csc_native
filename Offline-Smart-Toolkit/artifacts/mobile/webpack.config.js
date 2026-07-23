@@ -114,13 +114,21 @@ module.exports = {
       // needed by signature bg-remove; stubs them to null on web (file I/O only runs on native)
       'expo-file-system/legacy': path.join(projectRoot, 'shims/expo-file-system-legacy'),
       // These packages use expo-modules-core native bindings; replace with web stubs
-      'expo-image-picker':    path.join(projectRoot, 'shims/expo-image-picker'),
+      'expo-image-picker':        path.join(projectRoot, 'shims/expo-image-picker'),
       // expo-camera — native camera bridge; scanners fall back to "not available" UI on web
-      'expo-camera':          path.join(projectRoot, 'shims/expo-camera'),
+      'expo-camera':              path.join(projectRoot, 'shims/expo-camera'),
       // expo-sharing — native share sheet; screens use Web Share API / download fallback on web
-      'expo-sharing':         path.join(projectRoot, 'shims/expo-sharing'),
+      'expo-sharing':             path.join(projectRoot, 'shims/expo-sharing'),
       // expo-media-library — native gallery; guarded by Platform.OS !== 'web' in screens
-      'expo-media-library':   path.join(projectRoot, 'shims/expo-media-library'),
+      'expo-media-library':       path.join(projectRoot, 'shims/expo-media-library'),
+      // expo-image-manipulator → Canvas-API web shim (webpack picks .web.ts automatically)
+      'expo-image-manipulator':   path.join(projectRoot, 'shims/expo-image-manipulator'),
+      // expo-image → standard RN Image (react-native-web maps it to <img>)
+      'expo-image':               path.join(projectRoot, 'shims/expo-image'),
+      // expo-document-picker → browser file-input shim (webpack picks .web.ts automatically)
+      'expo-document-picker':     path.join(projectRoot, 'shims/expo-document-picker'),
+      // expo-file-system → no-op web shim (reuse legacy shim — same no-op surface)
+      'expo-file-system':         path.join(projectRoot, 'shims/expo-file-system-legacy'),
       // expo-blur ships its own web implementation — no shim needed
 
       // ── react-native-svg → web build (avoids native bridge code) ──────────

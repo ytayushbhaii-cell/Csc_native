@@ -27,6 +27,16 @@ const SHIMS = {
   'expo-linking':             path.join(projectRoot, 'shims/expo-linking.ts'),
   'expo-constants':           path.join(projectRoot, 'shims/expo-constants.ts'),
   '@expo-google-fonts/inter': path.join(projectRoot, 'shims/expo-google-fonts-inter.ts'),
+  // ── Packages migrated from Expo to RN CLI alternatives ───────────────────
+  'expo-image-manipulator':   path.join(projectRoot, 'shims/expo-image-manipulator.ts'),
+  'expo-image':               path.join(projectRoot, 'shims/expo-image.ts'),
+  'expo-document-picker':     path.join(projectRoot, 'shims/expo-document-picker.ts'),
+  'expo-file-system':         path.join(projectRoot, 'shims/expo-file-system.ts'),
+  'expo-file-system/legacy':  path.join(projectRoot, 'shims/expo-file-system-legacy.native.ts'),
+  'expo-image-picker':        path.join(projectRoot, 'shims/expo-image-picker.ts'),
+  'expo-sharing':             path.join(projectRoot, 'shims/expo-sharing.ts'),
+  'expo-media-library':       path.join(projectRoot, 'shims/expo-media-library.ts'),
+  'expo-camera':              path.join(projectRoot, 'shims/expo-camera.ts'),
 };
 
 const defaults = getDefaultConfig(projectRoot);

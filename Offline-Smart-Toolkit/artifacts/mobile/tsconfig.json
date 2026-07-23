@@ -17,7 +17,16 @@
       "expo-status-bar": ["./shims/expo-status-bar"],
       "expo-linear-gradient": ["./shims/expo-linear-gradient"],
       "@expo/vector-icons": ["./shims/expo-vector-icons"],
-      "@expo-google-fonts/inter": ["./shims/expo-google-fonts-inter"]
+      "@expo-google-fonts/inter": ["./shims/expo-google-fonts-inter"],
+      "expo-image-manipulator": ["./shims/expo-image-manipulator"],
+      "expo-image": ["./shims/expo-image"],
+      "expo-document-picker": ["./shims/expo-document-picker"],
+      "expo-file-system": ["./shims/expo-file-system"],
+      "expo-file-system/legacy": ["./shims/expo-file-system-legacy"],
+      "expo-image-picker": ["./shims/expo-image-picker"],
+      "expo-sharing": ["./shims/expo-sharing"],
+      "expo-media-library": ["./shims/expo-media-library"],
+      "expo-camera": ["./shims/expo-camera"]
     }
   },
   "include": [

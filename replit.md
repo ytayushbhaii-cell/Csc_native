@@ -6,7 +6,7 @@ An offline-first mobile toolkit for CSC Centers, Cyber Cafes, Photo Studios, and
 All processing happens 100% on-device — no internet, no cloud, no API calls.
 
 ### Stack
-- **Framework:** React Native CLI 0.81.5 (migrated from Expo managed workflow)
+- **Framework:** React Native CLI 0.81.5 (fully migrated from Expo — no Expo runtime required)
 - **Navigation:** React Navigation v7 (Stack navigator, 100+ screens)
 - **UI:** react-native-reanimated, react-native-vector-icons, react-native-linear-gradient
 - **AI / ML:** TensorFlow.js (CPU backend), ONNX Runtime React Native
@@ -14,6 +14,25 @@ All processing happens 100% on-device — no internet, no cloud, no API calls.
 - **OCR:** Tesseract.js (offline WASM)
 - **State:** React Context (AppContext, ThemeContext, DrawerContext, SettingsContext)
 - **Package manager:** pnpm (workspace monorepo)
+
+### Expo → React Native CLI Migration (complete as of July 2026)
+
+All Expo packages replaced with RN CLI alternatives via shims in `artifacts/mobile/shims/`:
+
+| Expo Package | RN CLI Replacement |
+|---|---|
+| `expo-image-manipulator` | `@react-native-community/image-editor` + Canvas API (web) |
+| `expo-image` | Standard `react-native` Image |
+| `expo-image-picker` | `react-native-image-picker` |
+| `expo-document-picker` | `react-native-document-picker` |
+| `expo-file-system` + `/legacy` | `react-native-fs` |
+| `expo-sharing` | `react-native-share` |
+| `expo-media-library` | `@react-native-community/cameraroll` |
+| `expo-camera` | `react-native-vision-camera` |
+| `@expo/vector-icons` | `react-native-vector-icons` |
+| `expo-splash-screen`, `expo-haptics`, `expo-clipboard`, `expo-font`, etc. | Shimmed to RN CLI equivalents |
+
+Shim resolution: Metro uses `metro.config.js` `resolveRequest`; webpack uses `webpack.config.js` `resolve.alias`; TypeScript uses `tsconfig.json` paths.
 
 ### Monorepo layout
 ```
