@@ -15,6 +15,7 @@ export default function BackgroundRemoveScreen() {
         { id: 'white', label: 'White', swatch: '#FFFFFF' },
         { id: 'blue', label: 'Blue', swatch: '#003399' },
         { id: 'red', label: 'Red', swatch: '#B22222' },
+        { id: 'custom', label: 'Custom', swatch: 'custom' },
       ]}
     />
   );

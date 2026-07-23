@@ -1,26 +1,26 @@
 /**
- * Background Swap Screen — v4 upgrade.
+ * Background Swap Screen — v5 upgrade.
  *
- * New in v4 (over v3):
- *  • ModelDownloadGate — detects whether AI models are installed; if not,
- *    shows a download card with real progress (%, MB/speed/ETA) before the
- *    tool becomes available
- *  • Cancel button — stop any in-progress removal at any time
- *  • User-friendly step labels:
- *      "Detecting Subject…" → "Refining Hair…" → "Enhancing Edges…" → "Generating Transparent PNG…"
- *  • Actual step callbacks wired to the AI pipeline (not fake timers)
- *  • Low-light image enhancement (automatic, internal — no UI change)
+ * New in v5 (over v4):
+ *  • Export format selector — PNG (transparent), JPG, WEBP after result
+ *  • Custom background color — hex color input when "Custom" preset is selected
+ *  • Processing time display — real elapsed time shown during & after processing
+ *  • Export step — dedicated "Exporting…" progress step
+ *  • Updated AI pipeline banner — accurately describes the full pipeline:
+ *    BiRefNet + PyMatting Guided Filter + BEN2 refinement + Alpha Matte
  *
- * Previous v3 features preserved unchanged:
+ * Previous v4 features preserved unchanged:
+ *  • ModelDownloadGate — download gate with %, speed, ETA, retry
+ *  • Cancel button
  *  • Quality mode selector — Standard / HD
  *  • Interactive before/after slider
  *  • Live model badge
- *  • HD Export button
  *  • Multi-model fallback indicator
+ *  • All existing colors, icons, layouts, animations
  */
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Platform,
+  View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Platform, TextInput,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
@@ -37,7 +37,7 @@ import {
   type QualityMode,
   type SegmentationStepCallback,
 } from '@/lib/photoTools/segmentation';
-import { exportFile, guessFileName } from '@/lib/photoTools/exportUtils';
+import { exportFile, guessFileName, convertToFormat } from '@/lib/photoTools/exportUtils';
 import { addRecentFile, recordToolUsage } from '@/lib/photoTools/db';
 import type { PickedImage, BackgroundPreset } from '@/lib/photoTools/types';
 
@@ -64,21 +64,21 @@ interface BackgroundSwapScreenProps {
 
 const STANDARD_STEPS = [
   { id: 'decode',  label: 'Loading image at original resolution…' },
-  { id: 'analyze', label: 'Analyzing subject & routing model…' },
-  { id: 'detect',  label: 'Detecting Subject…' },
+  { id: 'analyze', label: 'Analyzing subject & routing AI model…' },
+  { id: 'detect',  label: 'Detecting Subject (BiRefNet AI)…' },
   { id: 'ben2',    label: 'BEN2 Hair & Edge Refinement…' },
-  { id: 'refine',  label: 'Refining Hair & Fine Details…' },
-  { id: 'edges',   label: 'Enhancing Edges…' },
+  { id: 'refine',  label: 'PyMatting Alpha Matte Refinement…' },
+  { id: 'edges',   label: 'Edge Smoothing & Halo Removal…' },
   { id: 'encode',  label: 'Generating Transparent PNG…' },
 ];
 
 const HD_STEPS = [
   { id: 'decode',  label: 'Loading image at original resolution…' },
   { id: 'analyze', label: 'Analyzing subject & selecting HD pipeline…' },
-  { id: 'detect',  label: 'Running BiRefNet (HD mode)…' },
-  { id: 'ben2',    label: 'BEN2 Hair Refinement — sub-pixel precision…' },
-  { id: 'refine',  label: 'Guided filter + Hair strands…' },
-  { id: 'edges',   label: 'Enhancing Edges & Removing Halo…' },
+  { id: 'detect',  label: 'Running BiRefNet HD (1024×1024)…' },
+  { id: 'ben2',    label: 'BEN2 Sub-pixel Hair Refinement…' },
+  { id: 'refine',  label: 'PyMatting Quad-pass Guided Filter…' },
+  { id: 'edges',   label: 'Alpha Matte + Halo Removal (HD)…' },
   { id: 'encode',  label: 'Generating HD Transparent PNG…' },
 ];
 
@@ -89,8 +89,42 @@ const HD_STEPS = [
 // ben2 and rmbg2 are OPTIONAL — the pipeline handles them gracefully when absent:
 //  • BEN2Backend falls back to CPU refinement if ben2.onnx is not cached
 //  • RMBG-2.0 is skipped silently if not cached (u2net takes its place)
-// Do NOT add ben2 here until ben2.onnx is actually hosted and downloadable.
 const REQUIRED_MODEL_IDS = ['birefnet', 'u2net'];
+
+// ─── Export format type ───────────────────────────────────────────────────────
+type ExportFormat = 'png' | 'jpg' | 'webp';
+
+// ─── Hex color helpers ────────────────────────────────────────────────────────
+
+function hexToRGB(hex: string): [number, number, number] | null {
+  const clean = hex.replace('#', '').trim();
+  if (clean.length === 3) {
+    const r = parseInt(clean[0] + clean[0], 16);
+    const g = parseInt(clean[1] + clean[1], 16);
+    const b = parseInt(clean[2] + clean[2], 16);
+    if (isNaN(r) || isNaN(g) || isNaN(b)) return null;
+    return [r, g, b];
+  }
+  if (clean.length === 6) {
+    const r = parseInt(clean.slice(0, 2), 16);
+    const g = parseInt(clean.slice(2, 4), 16);
+    const b = parseInt(clean.slice(4, 6), 16);
+    if (isNaN(r) || isNaN(g) || isNaN(b)) return null;
+    return [r, g, b];
+  }
+  return null;
+}
+
+function isValidHex(hex: string): boolean {
+  return hexToRGB(hex) !== null;
+}
+
+function fmtSeconds(ms: number): string {
+  const s = ms / 1000;
+  if (s < 60) return `${s.toFixed(1)}s`;
+  const m = Math.floor(s / 60), rem = Math.round(s % 60);
+  return `${m}m ${rem}s`;
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -105,7 +139,9 @@ export function BackgroundSwapScreen({
   const [modelsReady, setModelsReady] = useState(false);
   const [image, setImage]   = useState<PickedImage | null>(null);
   const [preset, setPreset] = useState<BackgroundPreset>(defaultPreset);
+  const [customHex, setCustomHex] = useState('#FFFFFF');
   const [quality, setQuality] = useState<QualityMode>('standard');
+  const [exportFormat, setExportFormat] = useState<ExportFormat>('png');
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress]     = useState(0);
   const [steps, setSteps]   = useState(makeSteps(STANDARD_STEPS));
@@ -114,15 +150,35 @@ export function BackgroundSwapScreen({
     uri: string; width: number; height: number; modelName: string;
   } | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [processingMs, setProcessingMs] = useState<number | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const abortRef = useRef<AbortController | null>(null);
+  const startTimeRef = useRef<number>(0);
+  const elapsedRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [elapsedDisplay, setElapsedDisplay] = useState('');
+
+  // ── Tick elapsed timer during processing ──────────────────────────────────
+  useEffect(() => {
+    if (processing) {
+      startTimeRef.current = Date.now();
+      elapsedRef.current = setInterval(() => {
+        setElapsedDisplay(fmtSeconds(Date.now() - startTimeRef.current));
+      }, 500);
+    } else {
+      if (elapsedRef.current) { clearInterval(elapsedRef.current); elapsedRef.current = null; }
+      setElapsedDisplay('');
+    }
+    return () => { if (elapsedRef.current) clearInterval(elapsedRef.current); };
+  }, [processing]);
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const reset = useCallback(() => {
     abortRef.current?.abort();
     setImage(null); setResult(null); setError(null);
     setSteps(makeSteps(quality === 'hd' ? HD_STEPS : STANDARD_STEPS));
-    setProgress(0); setCancelling(false);
+    setProgress(0); setCancelling(false); setProcessingMs(null);
+    setExportFormat('png');
   }, [quality]);
 
   const tick = useCallback((id: string, status: 'running' | 'done' | 'error') => {
@@ -146,6 +202,7 @@ export function BackgroundSwapScreen({
     setError(null);
     setSteps(makeSteps(stepDefs));
     setProgress(0);
+    setProcessingMs(null);
 
     abortRef.current = new AbortController();
     const signal = abortRef.current.signal;
@@ -155,16 +212,23 @@ export function BackgroundSwapScreen({
       onStep: (id, status) => tick(id, status),
     };
 
+    // Resolve custom color for 'custom' preset
+    const customColor = preset === 'custom' ? (hexToRGB(customHex) ?? [255, 255, 255]) : undefined;
+
+    const t0 = Date.now();
     try {
       const out = await removeBackground(
         image.uri,
         preset,
-        undefined,       // customColor
+        customColor,
         (pct) => setProgress(pct),
         quality,
         stepCb,
         signal,
       );
+
+      const elapsed = Date.now() - t0;
+      setProcessingMs(elapsed);
 
       // Ensure all steps show done
       for (const s of stepDefs) tick(s.id, 'done');
@@ -178,7 +242,6 @@ export function BackgroundSwapScreen({
     } catch (e: any) {
       const isCancel = e?.name === 'AbortError' || e?.message?.includes('cancelled');
       if (isCancel) {
-        // User cancelled — reset quietly
         setProcessing(false);
         setCancelling(false);
         setSteps(makeSteps(stepDefs));
@@ -195,13 +258,32 @@ export function BackgroundSwapScreen({
       setProcessing(false);
       setCancelling(false);
     }
-  }, [image, preset, quality, tick, toolId, title]);
+  }, [image, preset, customHex, quality, tick, toolId, title]);
+
+  // ── Export with format conversion ─────────────────────────────────────────
+  const handleExport = useCallback(async () => {
+    if (!result) return;
+    setExporting(true);
+    try {
+      const { uri, ext } = await convertToFormat(result.uri, exportFormat);
+      const fileName = guessFileName(toolId, ext);
+      await exportFile(uri, fileName);
+    } finally {
+      setExporting(false);
+    }
+  }, [result, exportFormat, toolId]);
 
   const handleHDExport = useCallback(async () => {
     if (!result) return;
-    const fileName = guessFileName(`${toolId}-HD`, 'png');
-    await exportFile(result.uri, fileName);
-  }, [result, toolId]);
+    setExporting(true);
+    try {
+      const { uri, ext } = await convertToFormat(result.uri, exportFormat);
+      const fileName = guessFileName(`${toolId}-HD`, ext);
+      await exportFile(uri, fileName);
+    } finally {
+      setExporting(false);
+    }
+  }, [result, exportFormat, toolId]);
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -223,11 +305,11 @@ export function BackgroundSwapScreen({
       {/* ── Tool content — only shown when models are ready ── */}
       {modelsReady && (
         <>
-          {/* AI model info banner */}
+          {/* AI pipeline info banner */}
           <View style={[styles.infoBanner, { backgroundColor: color + '0D', borderColor: color + '30', borderRadius: colors.radius }]}>
             <MaterialCommunityIcons name="robot-outline" size={16} color={color} />
             <Text style={[styles.infoBannerText, { color: colors.foreground, fontFamily: 'Inter_400Regular' }]}>
-              BiRefNet → RMBG-2.0 → U2Net fallback chain · 100% offline · No data leaves device
+              BiRefNet → PyMatting Guided Filter → BEN2 Refinement → Alpha Matte · 100% offline
             </Text>
           </View>
           <AIModelBadge service="segmentation" showUpgradeHint />
@@ -240,7 +322,7 @@ export function BackgroundSwapScreen({
               onPicked={setImage}
               onError={setError}
               color={color}
-              label="Upload photo with a clear subject"
+              label="Upload photo — PNG, JPG, JPEG, WEBP supported"
             />
           )}
 
@@ -251,6 +333,7 @@ export function BackgroundSwapScreen({
               <View style={styles.presetsRow}>
                 {presets.map((p) => {
                   const active = preset === p.id;
+                  const isCustom = p.id === 'custom';
                   return (
                     <TouchableOpacity
                       key={p.id}
@@ -262,14 +345,47 @@ export function BackgroundSwapScreen({
                       }]}
                       activeOpacity={0.8}
                     >
-                      <View style={[styles.swatch, { backgroundColor: p.swatch === 'transparent' ? 'transparent' : p.swatch, borderColor: colors.border }]}>
-                        {p.swatch === 'transparent' && <MaterialCommunityIcons name="checkerboard" size={14} color={colors.mutedForeground} />}
-                      </View>
+                      {isCustom ? (
+                        <View style={[styles.swatch, {
+                          backgroundColor: isValidHex(customHex) ? customHex : '#888',
+                          borderColor: colors.border,
+                        }]} />
+                      ) : (
+                        <View style={[styles.swatch, { backgroundColor: p.swatch === 'transparent' ? 'transparent' : p.swatch, borderColor: colors.border }]}>
+                          {p.swatch === 'transparent' && <MaterialCommunityIcons name="checkerboard" size={14} color={colors.mutedForeground} />}
+                        </View>
+                      )}
                       <Text style={[styles.presetLabel, { color: active ? color : colors.foreground, fontFamily: 'Inter_500Medium' }]}>{p.label}</Text>
                     </TouchableOpacity>
                   );
                 })}
               </View>
+
+              {/* Custom color hex input — shown only when 'custom' is selected */}
+              {preset === 'custom' && (
+                <View style={[styles.customColorRow, { borderColor: colors.border, backgroundColor: colors.card, borderRadius: colors.radius - 4 }]}>
+                  <MaterialCommunityIcons name="palette" size={16} color={color} />
+                  <Text style={[styles.customColorLabel, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+                    Hex color:
+                  </Text>
+                  <TextInput
+                    value={customHex}
+                    onChangeText={setCustomHex}
+                    placeholder="#FFFFFF"
+                    placeholderTextColor={colors.mutedForeground}
+                    autoCapitalize="characters"
+                    maxLength={7}
+                    style={[styles.customColorInput, {
+                      color: colors.foreground,
+                      fontFamily: 'Inter_500Medium',
+                      borderColor: isValidHex(customHex) ? color : '#EF4444',
+                    }]}
+                  />
+                  {isValidHex(customHex) && (
+                    <View style={[styles.colorPreviewDot, { backgroundColor: customHex }]} />
+                  )}
+                </View>
+              )}
             </View>
           )}
 
@@ -279,8 +395,8 @@ export function BackgroundSwapScreen({
               <Text style={[styles.sectionLabel, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>Quality Mode</Text>
               <View style={styles.qualityRow}>
                 {([
-                  { id: 'standard' as QualityMode, label: 'Standard', icon: 'lightning-bolt', desc: 'Fast · Good for solid subjects' },
-                  { id: 'hd'       as QualityMode, label: 'HD',        icon: 'shimmer',        desc: 'Slower · Best for hair & fine detail' },
+                  { id: 'standard' as QualityMode, label: 'Standard', icon: 'lightning-bolt', desc: 'Fast · BiRefNet + PyMatting' },
+                  { id: 'hd'       as QualityMode, label: 'HD',        icon: 'shimmer',        desc: 'Slower · + BEN2 Hair Refinement' },
                 ] as const).map((q) => {
                   const active = quality === q.id;
                   return (
@@ -324,15 +440,22 @@ export function BackgroundSwapScreen({
           {/* Processing state: steps + progress + cancel */}
           {processing && (
             <>
-              {/* Progress bar + percentage */}
+              {/* Progress bar + percentage + elapsed time */}
               <View style={[styles.processingHeader, { backgroundColor: color + '0D', borderColor: color + '20', borderRadius: colors.radius - 2 }]}>
                 <ActivityIndicator color={color} size="small" />
                 <Text style={[styles.processingPct, { color: color, fontFamily: 'Inter_700Bold' }]}>
                   {progress}%
                 </Text>
-                <Text style={[styles.processingLabel, { color: colors.foreground, fontFamily: 'Inter_500Medium' }]}>
-                  {cancelling ? 'Cancelling…' : 'Processing…'}
-                </Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.processingLabel, { color: colors.foreground, fontFamily: 'Inter_500Medium' }]}>
+                    {cancelling ? 'Cancelling…' : 'Processing…'}
+                  </Text>
+                  {elapsedDisplay ? (
+                    <Text style={[styles.processingTime, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+                      {elapsedDisplay} elapsed
+                    </Text>
+                  ) : null}
+                </View>
               </View>
 
               {/* Live step list */}
@@ -386,23 +509,78 @@ export function BackgroundSwapScreen({
               <View style={[styles.metaRow, { borderColor: colors.border, backgroundColor: colors.card, borderRadius: colors.radius - 4 }]}>
                 <MaterialCommunityIcons name="check-circle-outline" size={14} color="#22C55E" />
                 <Text style={[styles.metaText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-                  {result.width}×{result.height}px · Lossless PNG · {quality === 'hd' ? 'HD soft-edge matting' : 'Professional soft-edge matting'}
+                  {result.width}×{result.height}px · Lossless PNG ·{' '}
+                  {quality === 'hd' ? 'HD soft-edge matting' : 'Professional soft-edge matting'}
+                  {processingMs ? ` · ${fmtSeconds(processingMs)}` : ''}
                 </Text>
               </View>
 
-              {/* Download / Share actions */}
-              <ResultActions uri={result.uri} fileName={guessFileName(toolId, 'png')} color={color} onReset={reset} />
+              {/* Export format selector */}
+              <View>
+                <Text style={[styles.sectionLabel, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>Export Format</Text>
+                <View style={styles.presetsRow}>
+                  {([
+                    { id: 'png'  as ExportFormat, label: 'PNG',  desc: 'Transparent' },
+                    { id: 'jpg'  as ExportFormat, label: 'JPG',  desc: 'White bg' },
+                    { id: 'webp' as ExportFormat, label: 'WEBP', desc: 'Smallest' },
+                  ] as const).map((f) => {
+                    const active = exportFormat === f.id;
+                    return (
+                      <TouchableOpacity
+                        key={f.id}
+                        onPress={() => setExportFormat(f.id)}
+                        style={[styles.presetChip, {
+                          borderColor: active ? color : colors.border,
+                          backgroundColor: active ? color + '14' : colors.card,
+                          borderRadius: colors.radius - 4,
+                        }]}
+                        activeOpacity={0.8}
+                      >
+                        <MaterialCommunityIcons
+                          name={f.id === 'png' ? 'image-outline' : f.id === 'jpg' ? 'image' : 'zip-box-outline'}
+                          size={14}
+                          color={active ? color : colors.mutedForeground}
+                        />
+                        <View>
+                          <Text style={[styles.presetLabel, { color: active ? color : colors.foreground, fontFamily: 'Inter_500Medium' }]}>
+                            {f.label}
+                          </Text>
+                          <Text style={[styles.formatDesc, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+                            {f.desc}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+
+              {/* Download / Share actions — wired to selected export format */}
+              <ResultActions
+                uri={result.uri}
+                fileName={guessFileName(toolId, exportFormat)}
+                color={color}
+                onReset={reset}
+                onDownload={handleExport}
+              />
 
               {/* HD Export: explicit full-resolution download button */}
               {Platform.OS === 'web' && (
                 <TouchableOpacity
-                  style={[styles.hdExportBtn, { borderColor: color, borderRadius: colors.radius - 2 }]}
+                  style={[styles.hdExportBtn, { borderColor: color, borderRadius: colors.radius - 2, opacity: exporting ? 0.6 : 1 }]}
                   onPress={handleHDExport}
                   activeOpacity={0.85}
+                  disabled={exporting}
                 >
-                  <MaterialCommunityIcons name="download-outline" size={18} color={color} />
+                  {exporting
+                    ? <ActivityIndicator size="small" color={color} />
+                    : <MaterialCommunityIcons name="download-outline" size={18} color={color} />
+                  }
                   <Text style={[styles.hdExportText, { color: color, fontFamily: 'Inter_600SemiBold' }]}>
-                    Download HD PNG ({result.width}×{result.height})
+                    {exporting
+                      ? `Exporting ${exportFormat.toUpperCase()}…`
+                      : `Download ${exportFormat.toUpperCase()} (${result.width}×${result.height})`
+                    }
                   </Text>
                 </TouchableOpacity>
               )}
@@ -436,6 +614,11 @@ const styles = StyleSheet.create({
   presetChip:       { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 10, borderWidth: 1 },
   swatch:           { width: 16, height: 16, borderRadius: 4, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   presetLabel:      { fontSize: 12 },
+  formatDesc:       { fontSize: 10, marginTop: 1 },
+  customColorRow:   { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, borderWidth: 1, marginTop: 8 },
+  customColorLabel: { fontSize: 12 },
+  customColorInput: { flex: 1, fontSize: 14, borderBottomWidth: 1, paddingVertical: 2, paddingHorizontal: 4 },
+  colorPreviewDot:  { width: 20, height: 20, borderRadius: 10, borderWidth: 1, borderColor: '#0002' },
   qualityRow:       { flexDirection: 'row', gap: 8 },
   qualityChip:      { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderWidth: 1.5 },
   qualityLabel:     { fontSize: 13 },
@@ -444,7 +627,8 @@ const styles = StyleSheet.create({
   processText:      { fontSize: 14 },
   processingHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 1 },
   processingPct:    { fontSize: 16 },
-  processingLabel:  { fontSize: 13, flex: 1 },
+  processingLabel:  { fontSize: 13 },
+  processingTime:   { fontSize: 10, marginTop: 1 },
   cancelBtn:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderWidth: 1, marginTop: 4 },
   cancelText:       { fontSize: 12 },
   modelBadge:       { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, alignSelf: 'flex-start' },

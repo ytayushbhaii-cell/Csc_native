@@ -11,14 +11,20 @@ interface ResultActionsProps {
   onReset: () => void;
   /** Set to false for non-image results (e.g. ZIP/PDF) to hide "Save to Gallery". */
   isImage?: boolean;
+  /** Optional custom download handler — overrides the default exportFile call. */
+  onDownload?: () => Promise<void> | void;
 }
 
-export function ResultActions({ uri, fileName, color, onReset, isImage = true }: ResultActionsProps) {
+export function ResultActions({ uri, fileName, color, onReset, isImage = true, onDownload }: ResultActionsProps) {
   const colors = useColors();
   const [saving, setSaving] = useState(false);
 
   const handleDownload = async () => {
-    await exportFile(uri, fileName);
+    if (onDownload) {
+      await onDownload();
+    } else {
+      await exportFile(uri, fileName);
+    }
   };
 
   const handleSaveToGallery = async () => {

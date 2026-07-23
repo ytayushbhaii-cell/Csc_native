@@ -486,6 +486,9 @@ const translations = {
 export type TranslationKey = keyof typeof translations.en;
 export type Translations = Record<TranslationKey, string>;
 
+/** Regional translation overrides (currently empty — extend as needed). */
+const regionalTranslations: Partial<Record<Lang, Partial<Record<TranslationKey, string>>>> = {};
+
 export function getTranslations(lang: Lang): Translations {
   const regional: Partial<Record<TranslationKey, string>> = {
     ...(regionalTranslations[lang] ?? {}),

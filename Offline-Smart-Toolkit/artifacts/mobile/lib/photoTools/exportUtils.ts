@@ -82,6 +82,60 @@ export function guessFileName(prefix: string, ext: string): string {
   return `${prefix}-${Date.now()}.${ext}`;
 }
 
+/**
+ * Convert an existing image URI to JPEG format.
+ * On web, uses Canvas toDataURL('image/jpeg').
+ * On native, uses the image-manipulator shim.
+ */
+export async function convertToJPG(
+  uri: string,
+  quality = 0.92,
+): Promise<{ uri: string; ext: 'jpg' }> {
+  if (Platform.OS === 'web') {
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const img = new window.Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d')!;
+        // Fill white background for JPEG (no transparency)
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = () => reject(new Error('Failed to load image for JPEG conversion'));
+      img.src = uri;
+    });
+    return { uri: dataUrl, ext: 'jpg' };
+  }
+
+  if (/\.jpg(?:$|\?)/i.test(uri) || /\.jpeg(?:$|\?)/i.test(uri)) {
+    return { uri, ext: 'jpg' };
+  }
+  const result = await manipulateAsync(uri, [], {
+    compress: quality,
+    format: SaveFormat.JPEG,
+  });
+  return { uri: result.uri, ext: 'jpg' };
+}
+
+/**
+ * Convert a PNG result URI to the requested export format.
+ * Returns { uri, ext } for correct filename extension.
+ */
+export async function convertToFormat(
+  uri: string,
+  format: 'png' | 'jpg' | 'webp',
+  quality = 0.92,
+): Promise<{ uri: string; ext: 'png' | 'jpg' | 'webp' }> {
+  if (format === 'jpg')  return convertToJPG(uri, quality);
+  if (format === 'webp') return convertToWebP(uri, quality);
+  return { uri, ext: 'png' };
+}
+
 /** Downloads (web) or shares (native) a result file to the user. */
 export async function exportFile(uri: string, fileName: string): Promise<void> {
   if (Platform.OS === 'web') {
