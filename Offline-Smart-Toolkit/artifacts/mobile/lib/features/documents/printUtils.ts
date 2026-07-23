@@ -2,7 +2,7 @@
 // Uses pdf-lib (already installed). Works identically on web and native.
 import { PDFDocument, rgb } from 'pdf-lib';
 import { Platform } from 'react-native';
-import * as FileSystem from 'expo-file-system';
+import { writeBase64File } from '@/lib/phase6/Phase6FileService';
 import type { PaperSize, PrintSheetResult } from './types';
 import { PAPER_SIZES_MM } from './types';
 
@@ -38,12 +38,9 @@ export async function writePdfBytes(bytes: Uint8Array, fileName = `doc-${Date.no
     for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
     return `data:application/pdf;base64,${btoa(binary)}`;
   }
-  const dir = (FileSystem as any).cacheDirectory ?? (FileSystem as any).documentDirectory;
-  const fileUri = `${dir}${fileName}`;
   let binary = '';
   for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-  await FileSystem.writeAsStringAsync(fileUri, btoa(binary), { encoding: 'base64' as const });
-  return fileUri;
+  return writeBase64File(btoa(binary), fileName);
 }
 
 /**

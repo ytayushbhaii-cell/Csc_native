@@ -40,9 +40,9 @@ export default function EmployeeIDScreen() {
   const set = (field: keyof EmployeeIDData, value: string) =>
     setData((d) => ({ ...d, [field]: value }));
 
-  const capture = async (): Promise<string> => {
+  const capture = async (format?: ExportFormat): Promise<string> => {
     const ref = showBack ? backShotRef : frontShotRef;
-    return (ref.current as any).capture();
+    return (ref.current as any).capture(format === 'jpg' ? { format: 'jpg', quality: 0.92 } : undefined);
   };
 
   const handleSave = async () => {
@@ -74,7 +74,7 @@ export default function EmployeeIDScreen() {
   const handleExport = async (format: ExportFormat) => {
     setExporting(true);
     try {
-      const uri = await capture();
+      const uri = await capture(format);
       const fileName = `EmployeeID-${data.employeeName.replace(/\s+/g, '_') || 'card'}-${Date.now()}`;
       await exportIDCard(uri, format, fileName);
       if (Platform.OS !== 'web') Alert.alert('Exported', `Card exported as ${format.toUpperCase()}.`);

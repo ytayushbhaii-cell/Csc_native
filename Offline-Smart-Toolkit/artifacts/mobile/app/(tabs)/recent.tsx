@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import { useApp } from '@/context/AppContext';
 import { useTheme } from '@/context/ThemeContext';
 import type { RecentFile } from '@/context/AppContext';
 import { useT } from '@/lib/i18n';
+import { getPhase6History } from '@/lib/phase6/Phase6History';
 
 const STATUS_CONFIG: Record<string, { color: string; icon: string }> = {
   Completed: { color: '#10B981', icon: 'check-circle-outline' },
@@ -86,8 +87,24 @@ export default function RecentFilesScreen() {
   const insets = useSafeAreaInsets();
   const { openDrawer } = useDrawer();
   const { recentFiles } = useApp();
+  const [phase6Recent, setPhase6Recent] = useState<RecentFile[]>([]);
   const { isDark } = useTheme();
   const t = useT();
+
+  useEffect(() => {
+    getPhase6History().then((entries) => {
+      setPhase6Recent(entries
+        .filter((entry) => entry.kind === 'export' || entry.kind === 'download' || entry.kind === 'share' || entry.kind === 'file')
+        .map((entry) => ({
+          id: entry.id,
+          fileName: entry.fileName,
+          toolUsed: entry.action,
+          date: new Date(entry.createdAt).toISOString(),
+          status: 'Completed' as const,
+        })));
+    }).catch(() => setPhase6Recent([]));
+  }, []);
+  const visibleFiles = [...phase6Recent, ...recentFiles.filter((item) => !phase6Recent.some((entry) => entry.fileName === item.fileName))];
 
   const topPadding = Platform.OS === 'web' ? 30 : insets.top;
   const bottomPadding = Platform.OS === 'web' ? 34 : insets.bottom;
@@ -115,7 +132,7 @@ export default function RecentFilesScreen() {
         </Text>
         <View style={[styles.badge, { backgroundColor: colors.primary + '18' }]}>
           <Text style={[styles.badgeText, { color: colors.primary, fontFamily: 'Inter_600SemiBold' }]}>
-            {recentFiles.length}
+             {visibleFiles.length}
           </Text>
         </View>
       </View>
@@ -137,7 +154,7 @@ export default function RecentFilesScreen() {
       </View>
 
       <FlatList
-        data={recentFiles}
+        data={visibleFiles}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ paddingBottom: bottomPadding + 16 }}
         renderItem={({ item, index }) => (

@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
-import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system';
+import { exportFile } from '@/lib/photoTools/exportUtils';
 
 interface DocResultActionsProps {
   uri: string;
@@ -21,25 +20,9 @@ export function DocResultActions({ uri, fileName, color, onReset, mimeType = 'ap
     setSharing(true);
     try {
       if (Platform.OS === 'web') {
-        // Web: trigger download via anchor
-        const a = document.createElement('a');
-        a.href = uri;
-        a.download = fileName;
-        a.click();
+        await exportFile(uri, fileName);
       } else {
-        // Native: check if sharing is available
-        const canShare = await Sharing.isAvailableAsync();
-        if (canShare) {
-          // If data URI, write to cache first
-          let shareUri = uri;
-          if (uri.startsWith('data:')) {
-            const base64 = uri.split(',')[1];
-            const dir = (FileSystem as any).cacheDirectory ?? (FileSystem as any).documentDirectory;
-            shareUri = `${dir}${fileName}`;
-            await FileSystem.writeAsStringAsync(shareUri, base64, { encoding: 'base64' as const });
-          }
-          await Sharing.shareAsync(shareUri, { mimeType, dialogTitle: `Share ${fileName}` });
-        }
+        await exportFile(uri, fileName);
       }
     } finally {
       setSharing(false);

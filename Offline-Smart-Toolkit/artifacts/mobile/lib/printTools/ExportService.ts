@@ -1,14 +1,10 @@
 // ────────────────────────────────────────────────────────────────────────────
 // ExportService – PDF generation for the Print Layout System
-// 100 % offline. Uses pdf-lib for PDF, expo-file-system for I/O.
-// Follows the project's established patterns (see lib/features/id-card/ExportService.ts):
-//   • encoding is always 'base64' as any (no FileSystem.EncodingType)
-//   • cacheDirectory via (FileSystem as any).cacheDirectory
+// 100 % offline. Uses pdf-lib and the Phase 6 filesystem service for I/O.
 //   • image embed errors are surfaced, not silently swallowed
 // ────────────────────────────────────────────────────────────────────────────
 import { Platform } from 'react-native';
-import * as FileSystem from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
+import { readFileAsBase64, writeBase64File, shareFiles } from '@/lib/phase6/Phase6FileService';
 import type { LayoutResult, SingleImageLayout } from './LayoutService';
 import { mmToPt } from './LayoutService';
 
@@ -18,8 +14,7 @@ export type ExportFormat = 'PDF' | 'PNG' | 'JPG';
 
 /**
  * Read a local file URI and return its base64 string.
- * Uses fetch on web and expo-file-system on native (encoding: 'base64' as any,
- * matching the project pattern — FileSystem.EncodingType is not available here).
+ * Uses fetch on web and the Phase 6 filesystem service on native.
  */
 async function fileToBase64(uri: string): Promise<string> {
   if (Platform.OS === 'web') {
@@ -39,7 +34,7 @@ async function fileToBase64(uri: string): Promise<string> {
     });
   }
   // Native — encoding 'base64' as any is the working pattern in this codebase
-  return FileSystem.readAsStringAsync(uri, { encoding: 'base64' as any });
+  return readFileAsBase64(uri);
 }
 
 /** Determine embed type from URI extension / content. Defaults to JPEG. */
@@ -49,13 +44,7 @@ function imageEmbedType(uri: string): 'JPEG' | 'PNG' {
 
 /** Write a base64 string to the cache directory and return the file URI. */
 async function writeToCacheDir(base64: string, fileName: string): Promise<string> {
-  const cacheDir =
-    (FileSystem as any).cacheDirectory ??
-    (FileSystem as any).documentDirectory ??
-    '';
-  const dest = `${cacheDir}${fileName}`;
-  await FileSystem.writeAsStringAsync(dest, base64, { encoding: 'base64' as any });
-  return dest;
+  return writeBase64File(base64, fileName);
 }
 
 // ── passport / multi-copy sheet PDF ──────────────────────────────────────────
@@ -359,22 +348,19 @@ export async function exportSheetToJPG(opts: SheetExportOptions): Promise<string
 
 export async function shareFile(uri: string): Promise<void> {
   if (Platform.OS === 'web') {
-    const link = document.createElement('a');
-    link.href = uri;
-    link.download = uri.split('/').pop() ?? 'export.pdf';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const { saveFile } = await import('@/lib/phase6/Phase6FileService');
+    const fileName = uri.split('/').pop() ?? 'export.pdf';
+    await saveFile(uri, fileName, 'downloads');
+    const { addPhase6History } = await import('@/lib/phase6/Phase6History');
+    await addPhase6History({ kind: 'download', action: 'print-export', fileName, uri, mimeType: 'application/octet-stream' });
     return;
   }
-  if (await Sharing.isAvailableAsync()) {
-    const lower = uri.toLowerCase();
-    let UTI = '.pdf';
-    let mimeType = 'application/pdf';
-    if (lower.endsWith('.png')) { UTI = '.png'; mimeType = 'image/png'; }
-    else if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) { UTI = '.jpg'; mimeType = 'image/jpeg'; }
-    await Sharing.shareAsync(uri, { UTI, mimeType });
-  }
+  const fileName = uri.split('/').pop() ?? 'export.pdf';
+  const { saveFile } = await import('@/lib/phase6/Phase6FileService');
+  const saved = await saveFile(uri, fileName, 'downloads');
+  await shareFiles([saved.uri], [fileName]);
+  const { addPhase6History } = await import('@/lib/phase6/Phase6History');
+  await addPhase6History({ kind: 'share', action: 'print-export', fileName, uri: saved.uri, mimeType: 'application/octet-stream' });
 }
 
 // ── util ──────────────────────────────────────────────────────────────────────

@@ -16,6 +16,7 @@ export const ROUTE_TO_SCREEN: Record<string, string> = {
   '/recent':         'Recent',
   '/most-used':      'MostUsed',
   '/history':        'History',
+  '/file-manager':   'FileManager',
   '/settings':       'Settings',
 
   // ── Settings sub-screens ──────────────────────────────────────────────────

@@ -2,7 +2,7 @@
 // identically on native and web since it has no native dependencies.
 import { PDFDocument } from 'pdf-lib';
 import { Platform } from 'react-native';
-import * as FileSystem from 'expo-file-system';
+import { writeBase64File } from '@/lib/phase6/Phase6FileService';
 
 const A4_WIDTH_PT = 595.28;
 const A4_HEIGHT_PT = 841.89;
@@ -64,11 +64,7 @@ async function writePdfBytes(bytes: Uint8Array): Promise<string> {
     const base64 = btoa(binary);
     return `data:application/pdf;base64,${base64}`;
   }
-  const dir = (FileSystem as any).cacheDirectory ?? (FileSystem as any).documentDirectory;
-  const fileUri = `${dir}passport-sheet-${Date.now()}.pdf`;
   let binary = '';
   for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-  const base64 = btoa(binary);
-  await FileSystem.writeAsStringAsync(fileUri, base64, { encoding: 'base64' as const });
-  return fileUri;
+  return writeBase64File(btoa(binary), `passport-sheet-${Date.now()}.pdf`);
 }

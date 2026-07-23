@@ -15,6 +15,7 @@ import {
   getAllHistory, clearHistory, deleteHistoryEntry,
   type ToolHistoryEntry,
 } from '@/lib/features/toolsHistory/db';
+import { clearPhase6History } from '@/lib/phase6/Phase6History';
 
 const TOOL_COLOR = '#8B5CF6';
 
@@ -23,6 +24,10 @@ const CAT_ICONS: Record<string, string> = {
   barcode:   'barcode',
   signature: 'draw',
   stamp:     'stamper',
+  export:    'file-export-outline',
+  download:  'download-outline',
+  share:     'share-variant-outline',
+  file:      'file-outline',
 };
 
 const CAT_COLORS: Record<string, string> = {
@@ -30,6 +35,10 @@ const CAT_COLORS: Record<string, string> = {
   barcode:   '#06B6D4',
   signature: '#EC4899',
   stamp:     '#F97316',
+  export:    '#2563EB',
+  download:  '#059669',
+  share:     '#7C3AED',
+  file:      '#64748B',
 };
 
 const CAT_LABELS: Record<string, string> = {
@@ -37,6 +46,10 @@ const CAT_LABELS: Record<string, string> = {
   barcode:   'Barcode',
   signature: 'Signature',
   stamp:     'Stamp',
+  export:    'Export',
+  download:  'Download',
+  share:     'Share',
+  file:      'File',
 };
 
 function formatDate(ms: number): string {
@@ -116,7 +129,7 @@ export default function HistoryScreen() {
 
   useEffect(() => { load(); }, [load]);
 
-  const handleDelete = useCallback(async (id: number) => {
+  const handleDelete = useCallback(async (id: string) => {
     await deleteHistoryEntry(id);
     setEntries((prev) => prev.filter((e) => e.id !== id));
   }, []);
@@ -130,9 +143,7 @@ export default function HistoryScreen() {
         {
           text: t('tabs.history.clearConfirm'), style: 'destructive',
           onPress: async () => {
-            await Promise.all(
-              (['qr', 'barcode', 'signature', 'stamp'] as const).map((c) => clearHistory(c)),
-            );
+            await clearPhase6History();
             setEntries([]);
           },
         },
@@ -198,7 +209,7 @@ export default function HistoryScreen() {
             <Text style={[styles.emptyDesc, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
               {loading
                 ? 'Fetching your processing history…'
-                : 'Tool processing history will appear here as you use QR, Barcode, Signature, and Stamp tools.'}
+               : 'Your tool, export, download, share, and file activity will appear here.'}
             </Text>
           </View>
         )}

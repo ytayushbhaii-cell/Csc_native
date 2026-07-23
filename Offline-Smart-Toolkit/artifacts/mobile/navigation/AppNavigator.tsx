@@ -16,6 +16,7 @@ import Favorites      from '@/app/(tabs)/favorites';
 import Recent         from '@/app/(tabs)/recent';
 import MostUsed       from '@/app/(tabs)/most-used';
 import History        from '@/app/(tabs)/history';
+import FileManager    from '@/app/file-manager';
 import Settings       from '@/app/(tabs)/settings';
 
 // ── Settings sub-screens ──────────────────────────────────────────────────
@@ -172,6 +173,7 @@ export function AppNavigator() {
       <Stack.Screen name="Recent"     component={Recent} />
       <Stack.Screen name="MostUsed"   component={MostUsed} />
       <Stack.Screen name="History"    component={History} />
+      <Stack.Screen name="FileManager" component={FileManager} />
       <Stack.Screen name="Settings"   component={Settings} />
 
       {/* ── Settings sub-screens ─────────────────────────────────── */}

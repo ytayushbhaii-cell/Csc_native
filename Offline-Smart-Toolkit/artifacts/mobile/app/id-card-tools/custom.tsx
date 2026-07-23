@@ -59,7 +59,8 @@ export default function CustomIDScreen() {
   const removeField = (id: string) =>
     setData((d) => ({ ...d, fields: d.fields.filter((f) => f.id !== id) }));
 
-  const capture = async (): Promise<string> => (shotRef.current as any).capture();
+  const capture = async (format?: ExportFormat): Promise<string> =>
+    (shotRef.current as any).capture(format === 'jpg' ? { format: 'jpg', quality: 0.92 } : undefined);
 
   const handleSave = async () => {
     setSaving(true);
@@ -86,7 +87,7 @@ export default function CustomIDScreen() {
   const handleExport = async (format: ExportFormat) => {
     setExporting(true);
     try {
-      const uri = await capture();
+      const uri = await capture(format);
       const fileName = `CustomID-${data.orgName?.replace(/\s+/g, '_') || 'card'}-${Date.now()}`;
       await exportIDCard(uri, format, fileName);
       if (Platform.OS !== 'web') Alert.alert('Exported', `Exported as ${format.toUpperCase()}.`);

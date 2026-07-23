@@ -1,7 +1,7 @@
 /**
  * expo-linear-gradient web shim — CSS-based LinearGradient.
  * Avoids react-native-linear-gradient entirely (it has broken Windows/web build files).
- * Webpack picks this .web.ts variant over expo-linear-gradient.ts on web builds.
+ * Webpack picks this .web.tsx variant over expo-linear-gradient.ts on web builds.
  */
 import React from 'react';
 import { View, ViewStyle } from 'react-native';
@@ -38,14 +38,9 @@ export function LinearGradient({
   ...rest
 }: LinearGradientProps) {
   const angle = toAngle(start, end);
-  let gradientArg: string;
-
-  if (locations && locations.length === colors.length) {
-    gradientArg = colors.map((c, i) => `${c} ${Math.round(locations[i] * 100)}%`).join(', ');
-  } else {
-    gradientArg = colors.join(', ');
-  }
-
+  const gradientArg = locations && locations.length === colors.length
+    ? colors.map((c, i) => `${c} ${Math.round(locations[i] * 100)}%`).join(', ')
+    : colors.join(', ');
   const cssStyle = {
     backgroundImage: `linear-gradient(${angle}deg, ${gradientArg})`,
   };

@@ -5,14 +5,19 @@
 //
 // Native patterns match the rest of the project (see lib/photoTools/exportUtils.ts,
 // lib/photoTools/pdfUtils.ts):
-//   • expo-file-system is imported dynamically so this file stays web-safe
-//   • encoding is always 'base64' as any (no FileSystem.EncodingType)
-//   • cacheDirectory via (FileSystem as any).cacheDirectory
-//   • expo-sharing: Sharing.shareAsync (not Sharing.default.*)
+//   • native file I/O and sharing use the React Native CLI Phase 6 service
 //   • Uint8Array → base64 via uint8ToBase64() (no Buffer)
 
 import { Platform } from 'react-native';
 import type { ExportFormat } from './types';
+import {
+  readFileAsBase64,
+  writeBase64File,
+  saveFile,
+  shareFiles,
+} from '@/lib/phase6/Phase6FileService';
+import { addPhase6History } from '@/lib/phase6/Phase6History';
+import { getDefaultFolder } from '@/lib/features/settings/SettingsService';
 
 /** Standard ID card dimensions in points (85.6mm × 54mm @ 96dpi) */
 const CARD_W_PT = 242.8;  // 85.6mm in pts
@@ -95,6 +100,7 @@ async function exportWeb(
     a.click();
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 5000);
+    await addPhase6History({ kind: 'download', action: 'id-card-pdf', fileName: `${filename}.pdf`, uri: url, mimeType: 'application/pdf' });
     return url;
   }
 
@@ -115,11 +121,13 @@ async function exportWeb(
     ctx.drawImage(img, 0, 0);
     const jpgUrl = canvas.toDataURL('image/jpeg', 0.92);
     await downloadOnWeb(jpgUrl, `${filename}.jpg`);
+    await addPhase6History({ kind: 'download', action: 'id-card-jpg', fileName: `${filename}.jpg`, uri: jpgUrl, mimeType: 'image/jpeg' });
     return jpgUrl;
   }
 
   // PNG
   await downloadOnWeb(dataUrl, `${filename}.png`);
+  await addPhase6History({ kind: 'download', action: 'id-card-png', fileName: `${filename}.png`, uri: dataUrl, mimeType: 'image/png' });
   return dataUrl;
 }
 
@@ -128,24 +136,11 @@ async function exportNative(
   format: ExportFormat,
   filename: string,
 ): Promise<string> {
-  // Dynamic imports so this file stays web-bundleable (same pattern as exportUtils.ts)
-  const FileSystem = await import('expo-file-system');
-  const Sharing = await import('expo-sharing');
-
-  // cacheDirectory access — matches (FileSystem as any).cacheDirectory pattern in the project
-  const cacheDir: string =
-    (FileSystem as any).cacheDirectory ??
-    (FileSystem as any).documentDirectory ??
-    '';
-
   if (format === 'pdf') {
     const { PDFDocument } = await import('pdf-lib');
     const pdfDoc = await PDFDocument.create();
 
-    // Read captured PNG as base64 — use string literal 'base64', not EncodingType
-    const b64: string = await (FileSystem as any).readAsStringAsync(fileUri, {
-      encoding: 'base64' as any,
-    });
+    const b64 = await readFileAsBase64(fileUri);
     const imgBytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
 
     const page = pdfDoc.addPage([CARD_W_PT + 40, CARD_H_PT + 40]);
@@ -153,35 +148,44 @@ async function exportNative(
     page.drawImage(img, { x: 20, y: 20, width: CARD_W_PT, height: CARD_H_PT });
 
     const pdfBytes = await pdfDoc.save();
-    const outPath = `${cacheDir}${filename}.pdf`;
-
-    // uint8ToBase64 avoids Buffer (not available on all RN setups)
-    await (FileSystem as any).writeAsStringAsync(outPath, uint8ToBase64(pdfBytes), {
-      encoding: 'base64' as any,
+    const outPath = await writeBase64File(uint8ToBase64(pdfBytes), `${filename}.pdf`);
+    const saved = await saveFile(outPath, `${filename}.pdf`, await getDefaultFolder());
+    await shareFiles([saved.uri], [`${filename}.pdf`]);
+    await addPhase6History({
+      kind: 'export',
+      action: 'id-card-pdf',
+      fileName: `${filename}.pdf`,
+      uri: saved.uri,
+      mimeType: 'application/pdf',
     });
-    await Sharing.shareAsync(outPath, { mimeType: 'application/pdf' });
-    return outPath;
+    return saved.uri;
   }
 
   if (format === 'jpg') {
-    // Use expo-image-manipulator for real JPEG conversion (not just renaming extension)
-    const ImageManipulator = await import('expo-image-manipulator');
-    const result = await ImageManipulator.manipulateAsync(
-      fileUri,
-      [],
-      { compress: 0.92, format: (ImageManipulator as any).SaveFormat?.JPEG ?? 'jpeg' },
-    );
-    const outPath = `${cacheDir}${filename}.jpg`;
-    await (FileSystem as any).copyAsync({ from: result.uri, to: outPath });
-    await Sharing.shareAsync(outPath, { mimeType: 'image/jpeg' });
-    return outPath;
+    const outPath = await writeBase64File(await readFileAsBase64(fileUri), `${filename}.jpg`);
+    const saved = await saveFile(outPath, `${filename}.jpg`, await getDefaultFolder());
+    await shareFiles([saved.uri], [`${filename}.jpg`]);
+    await addPhase6History({
+      kind: 'export',
+      action: 'id-card-jpg',
+      fileName: `${filename}.jpg`,
+      uri: saved.uri,
+      mimeType: 'image/jpeg',
+    });
+    return saved.uri;
   }
 
-  // PNG — ViewShot already captures as PNG; copy to cache and share
-  const outPath = `${cacheDir}${filename}.png`;
-  await (FileSystem as any).copyAsync({ from: fileUri, to: outPath });
-  await Sharing.shareAsync(outPath, { mimeType: 'image/png' });
-  return outPath;
+  const outPath = await writeBase64File(await readFileAsBase64(fileUri), `${filename}.png`);
+  const saved = await saveFile(outPath, `${filename}.png`, await getDefaultFolder());
+  await shareFiles([saved.uri], [`${filename}.png`]);
+  await addPhase6History({
+    kind: 'export',
+    action: 'id-card-png',
+    fileName: `${filename}.png`,
+    uri: saved.uri,
+    mimeType: 'image/png',
+  });
+  return saved.uri;
 }
 
 /**
@@ -240,14 +244,8 @@ export async function exportMultipleIDCards(
     a.click();
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 5000);
+    await addPhase6History({ kind: 'download', action: 'id-card-multiple-pdf', fileName: `${filename}.pdf`, uri: url, mimeType: 'application/pdf', metadata: { count: capturedUris.length, perSheet } });
   } else {
-    const FileSystem = await import('expo-file-system');
-    const Sharing = await import('expo-sharing');
-    const cacheDir: string =
-      (FileSystem as any).cacheDirectory ??
-      (FileSystem as any).documentDirectory ??
-      '';
-
     for (let p = 0; p < pages; p++) {
       const page = pdfDoc.addPage([A4_W, A4_H]);
       for (let i = 0; i < perSheet; i++) {
@@ -257,9 +255,7 @@ export async function exportMultipleIDCards(
         const row = Math.floor(i / cols);
         const x = margin + col * (cardW + gutter);
         const y = A4_H - margin - (row + 1) * cardH - row * gutter;
-        const b64: string = await (FileSystem as any).readAsStringAsync(uri, {
-          encoding: 'base64' as any,
-        });
+        const b64 = await readFileAsBase64(uri);
         const imgBytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
         let img;
         try {
@@ -271,10 +267,16 @@ export async function exportMultipleIDCards(
       }
     }
     const pdfBytes = await pdfDoc.save();
-    const outPath = `${cacheDir}${filename}.pdf`;
-    await (FileSystem as any).writeAsStringAsync(outPath, uint8ToBase64(pdfBytes), {
-      encoding: 'base64' as any,
+    const outPath = await writeBase64File(uint8ToBase64(pdfBytes), `${filename}.pdf`);
+    const saved = await saveFile(outPath, `${filename}.pdf`, await getDefaultFolder());
+    await shareFiles([saved.uri], [`${filename}.pdf`]);
+    await addPhase6History({
+      kind: 'export',
+      action: 'id-card-multiple-pdf',
+      fileName: `${filename}.pdf`,
+      uri: saved.uri,
+      mimeType: 'application/pdf',
+      metadata: { count: capturedUris.length, perSheet },
     });
-    await Sharing.shareAsync(outPath, { mimeType: 'application/pdf' });
   }
 }

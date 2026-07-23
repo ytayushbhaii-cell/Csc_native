@@ -40,13 +40,9 @@ export default function StudentIDScreen() {
   const set = (field: keyof StudentIDData, value: string) =>
     setData((d) => ({ ...d, [field]: value }));
 
-  const capture = async (): Promise<string> => {
+  const capture = async (format?: ExportFormat): Promise<string> => {
     const ref = showBack ? backShotRef : frontShotRef;
-    if (Platform.OS === 'web') {
-      // On web, html2canvas via ViewShot
-      return (ref.current as any).capture();
-    }
-    return (ref.current as any).capture();
+    return (ref.current as any).capture(format === 'jpg' ? { format: 'jpg', quality: 0.92 } : undefined);
   };
 
   const handleSave = async () => {
@@ -78,7 +74,7 @@ export default function StudentIDScreen() {
   const handleExport = async (format: ExportFormat) => {
     setExporting(true);
     try {
-      const uri = await capture();
+      const uri = await capture(format);
       const fileName = `StudentID-${data.name.replace(/\s+/g, '_') || 'card'}-${Date.now()}`;
       await exportIDCard(uri, format, fileName);
       if (Platform.OS !== 'web') {

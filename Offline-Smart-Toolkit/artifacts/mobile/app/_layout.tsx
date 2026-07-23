@@ -15,6 +15,7 @@ import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 import { DrawerProvider } from '@/context/DrawerContext';
 import { AppProvider } from '@/context/AppContext';
 import { SettingsProvider } from '@/context/SettingsContext';
+import { initPhase6History } from '@/lib/phase6/Phase6History';
 
 // Hide the native splash immediately — no splash screen of any kind.
 SplashScreen.preventAutoHideAsync().then(() => SplashScreen.hideAsync()).catch(() => {});
@@ -36,6 +37,8 @@ export default function RootLayout() {
     Inter_600SemiBold,
     Inter_700Bold,
   });
+
+  useEffect(() => { void initPhase6History(); }, []);
 
   if (!fontsLoaded) return null;
 

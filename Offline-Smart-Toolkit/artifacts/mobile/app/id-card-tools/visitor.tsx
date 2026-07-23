@@ -37,7 +37,8 @@ export default function VisitorIDScreen() {
   const set = (field: keyof VisitorIDData, value: string) =>
     setData((d) => ({ ...d, [field]: value }));
 
-  const capture = async (): Promise<string> => (shotRef.current as any).capture();
+  const capture = async (format?: ExportFormat): Promise<string> =>
+    (shotRef.current as any).capture(format === 'jpg' ? { format: 'jpg', quality: 0.92 } : undefined);
 
   const handleSave = async () => {
     if (!data.visitorName.trim()) {
@@ -68,7 +69,7 @@ export default function VisitorIDScreen() {
   const handleExport = async (format: ExportFormat) => {
     setExporting(true);
     try {
-      const uri = await capture();
+      const uri = await capture(format);
       const fileName = `VisitorPass-${data.visitorName.replace(/\s+/g, '_') || 'pass'}-${Date.now()}`;
       await exportIDCard(uri, format, fileName);
       if (Platform.OS !== 'web') Alert.alert('Exported', `Pass exported as ${format.toUpperCase()}.`);

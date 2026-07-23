@@ -35,6 +35,7 @@ export function AppDrawer() {
     { label: t('nav.recentFiles'), icon: 'clock-outline',          route: '/recent' },
     { label: t('nav.mostUsed'),    icon: 'chart-bar',              route: '/most-used' },
     { label: t('nav.history'),     icon: 'history',                route: '/history' },
+    { label: 'File Manager',       icon: 'folder-multiple-outline',  route: '/file-manager' },
     { label: t('nav.settings'),    icon: 'cog-outline',            route: '/settings' },
   ];
 

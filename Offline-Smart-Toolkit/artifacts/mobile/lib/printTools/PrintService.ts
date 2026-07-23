@@ -38,6 +38,7 @@ import {
 } from './ExportService';
 
 import { initPrintDb, addPrintHistory } from './db';
+import { addPhase6History } from '@/lib/phase6/Phase6History';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -95,6 +96,21 @@ function formatFromUri(uri: string): ExportFormat {
   if (lower.endsWith('.png')) return 'PNG';
   if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'JPG';
   return 'PDF';
+}
+
+async function recordPhase6PrintExport(
+  action: string,
+  uri: string,
+  fileName: string,
+  format: ExportFormat,
+): Promise<void> {
+  await addPhase6History({
+    kind: 'export',
+    action,
+    fileName,
+    uri,
+    mimeType: format === 'PDF' ? 'application/pdf' : format === 'PNG' ? 'image/png' : 'image/jpeg',
+  });
 }
 
 // ── Main orchestrator ─────────────────────────────────────────────────────────
@@ -161,6 +177,7 @@ async function _runA4Job(job: A4PrintJob): Promise<PrintResult> {
   const actualFormat = formatFromUri(uri);
   const actualFileName = uri.split('/').pop() ?? fileName;
   addPrintHistory('A4 Layout', actualFileName, actualFormat);
+  await recordPhase6PrintExport('a4-layout-export', uri, actualFileName, actualFormat);
   return { uri, format: actualFormat, fileName: actualFileName };
 }
 
@@ -203,6 +220,7 @@ async function _runPassportJob(job: PassportPrintJob): Promise<PrintResult> {
   const actualFormat = formatFromUri(uri);
   const actualFileName = uri.split('/').pop() ?? fileName;
   addPrintHistory('Passport Sheet', actualFileName, actualFormat);
+  await recordPhase6PrintExport('passport-sheet-export', uri, actualFileName, actualFormat);
   return { uri, format: actualFormat, fileName: actualFileName };
 }
 
@@ -234,6 +252,7 @@ async function _runCopiesJob(job: MultiCopiesPrintJob): Promise<PrintResult> {
   const actualFormat = formatFromUri(uri);
   const actualFileName = uri.split('/').pop() ?? fileName;
   addPrintHistory('Multiple Copies', actualFileName, actualFormat);
+  await recordPhase6PrintExport('multiple-copies-export', uri, actualFileName, actualFormat);
   return { uri, format: actualFormat, fileName: actualFileName };
 }
 
