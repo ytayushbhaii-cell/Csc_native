@@ -17,6 +17,7 @@ import {
 } from '@/lib/features/barcode/barcodeService';
 import { addHistoryEntry } from '@/lib/features/toolsHistory/db';
 import { exportFile } from '@/lib/photoTools/exportUtils';
+import { exportImageAsPdf } from '@/lib/photoTools/pdfExport';
 
 const BARCODE_COLOR = '#7C3AED';
 
@@ -89,6 +90,28 @@ export default function BarcodeGeneratorScreen() {
       await exportFile(uri, fileName);
     } catch (e: any) {
       Alert.alert('Export failed', e?.message ?? 'Unknown error');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleExportPdf = async () => {
+    if (!segments) { Alert.alert('Nothing to export', 'Enter valid content first.'); return; }
+    setExporting(true);
+    try {
+      const uri = await captureBarcode();
+      const fileName = `Barcode-${format}-${Date.now()}.pdf`;
+      const pdfUri = await exportImageAsPdf(uri, fileName, `Barcode ${format} — ${inputText}`);
+      await addHistoryEntry({
+        category: 'barcode',
+        toolId: 'barcode-generator',
+        title: `Barcode ${format} (PDF)`,
+        detail: inputText,
+        outputUri: pdfUri,
+      });
+      await exportFile(pdfUri, fileName);
+    } catch (e: any) {
+      Alert.alert('PDF Export failed', e?.message ?? 'Unknown error');
     } finally {
       setExporting(false);
     }
@@ -244,6 +267,7 @@ export default function BarcodeGeneratorScreen() {
           ))}
         </View>
 
+        {/* Export PNG */}
         <TouchableOpacity
           style={[styles.exportBtn, { backgroundColor: BARCODE_COLOR, borderRadius: colors.radius, opacity: segments ? 1 : 0.45 }]}
           onPress={handleExport}
@@ -255,6 +279,19 @@ export default function BarcodeGeneratorScreen() {
           </Text>
         </TouchableOpacity>
 
+        {/* Export PDF */}
+        <TouchableOpacity
+          style={[styles.exportBtn, { backgroundColor: '#DC2626', borderRadius: colors.radius, opacity: segments ? 1 : 0.45, marginTop: 10 }]}
+          onPress={handleExportPdf}
+          disabled={!segments || exporting}
+        >
+          <MaterialCommunityIcons name="file-pdf-box" size={20} color="#fff" />
+          <Text style={[styles.exportBtnText, { fontFamily: 'Inter_700Bold' }]}>
+            {exporting ? 'Exporting...' : 'Export PDF'}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Share */}
         <TouchableOpacity
           style={[styles.shareBtn, { borderColor: BARCODE_COLOR, borderRadius: colors.radius, opacity: segments ? 1 : 0.45 }]}
           onPress={handleShare}

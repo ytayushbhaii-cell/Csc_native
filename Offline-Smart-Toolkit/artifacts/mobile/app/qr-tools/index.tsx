@@ -96,7 +96,7 @@ export default function QRToolsHome() {
                   <TouchableOpacity
                     key={tool.id}
                     style={[styles.toolCard, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}
-                    onPress={() => router.push(tool.route as any)}
+                    onPress={() => router.push(tool.route as any, tool.params)}
                     activeOpacity={0.85}
                   >
                     <View style={styles.toolCardTop}>

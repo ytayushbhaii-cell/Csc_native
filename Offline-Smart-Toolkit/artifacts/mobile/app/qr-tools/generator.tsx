@@ -3,7 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView,
   Platform, Alert,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
@@ -15,6 +15,7 @@ import { useApp } from '@/context/AppContext';
 import { buildQRValue, describeQRValue, type QRType } from '@/lib/features/qr/qrService';
 import { addHistoryEntry } from '@/lib/features/toolsHistory/db';
 import { exportFile } from '@/lib/photoTools/exportUtils';
+import { exportImageAsPdf } from '@/lib/photoTools/pdfExport';
 
 const QR_COLOR = '#8B5CF6';
 
@@ -36,11 +37,16 @@ export default function QRGeneratorScreen() {
   const insets = useSafeAreaInsets();
   const { isDark } = useTheme();
   const { favoriteIds, toggleFavorite } = useApp();
+  const { initialType } = useLocalSearchParams<{ initialType?: string }>();
 
   const topPadding = Platform.OS === 'web' ? 30 : insets.top;
   const bottomPadding = Platform.OS === 'web' ? 34 : insets.bottom;
 
-  const [qrType, setQrType] = useState<QRType>('text');
+  const validInitialType = (initialType && QR_TYPES.some((t) => t.id === initialType))
+    ? (initialType as QRType)
+    : 'text';
+
+  const [qrType, setQrType] = useState<QRType>(validInitialType);
   const [formData, setFormData] = useState<Record<string, string>>({ text: '' });
   const [fgColor, setFgColor] = useState('#000000');
   const [bgColor, setBgColor] = useState('#FFFFFF');
@@ -102,6 +108,28 @@ export default function QRGeneratorScreen() {
       await exportFile(uri, fileName);
     } catch (e: any) {
       Alert.alert('Export failed', e?.message ?? 'Unknown error');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleExportPdf = async () => {
+    if (!hasValue) { Alert.alert('Empty QR', 'Please enter some content first.'); return; }
+    setExporting(true);
+    try {
+      const uri = await captureQR();
+      const fileName = `QR-${qrType}-${Date.now()}.pdf`;
+      const pdfUri = await exportImageAsPdf(uri, fileName, `QR Code — ${qrType.toUpperCase()} | ${describeQRValue(qrType, formData)}`);
+      await addHistoryEntry({
+        category: 'qr',
+        toolId: 'qr-generator',
+        title: `QR ${qrType.toUpperCase()} (PDF)`,
+        detail: describeQRValue(qrType, formData),
+        outputUri: pdfUri,
+      });
+      await exportFile(pdfUri, fileName);
+    } catch (e: any) {
+      Alert.alert('PDF Export failed', e?.message ?? 'Unknown error');
     } finally {
       setExporting(false);
     }
@@ -221,6 +249,8 @@ export default function QRGeneratorScreen() {
     }
   };
 
+  const activeType = QR_TYPES.find((t) => t.id === qrType);
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
@@ -230,7 +260,9 @@ export default function QRGeneratorScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <MaterialCommunityIcons name="arrow-left" size={22} color={colors.foreground} />
         </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>QR Generator</Text>
+        <Text style={[styles.title, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
+          {activeType ? `${activeType.label} QR Generator` : 'QR Generator'}
+        </Text>
         <TouchableOpacity onPress={() => toggleFavorite('qr-generator')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={styles.iconBtn}>
           <MaterialCommunityIcons name={isFav ? 'heart' : 'heart-outline'} size={22} color={isFav ? '#EF4444' : colors.mutedForeground} />
         </TouchableOpacity>
@@ -291,7 +323,7 @@ export default function QRGeneratorScreen() {
           ))}
         </View>
 
-        {/* Export */}
+        {/* Export PNG */}
         <TouchableOpacity
           style={[styles.exportBtn, { backgroundColor: QR_COLOR, borderRadius: colors.radius, opacity: hasValue ? 1 : 0.45 }]}
           onPress={handleExport}
@@ -304,6 +336,20 @@ export default function QRGeneratorScreen() {
           </Text>
         </TouchableOpacity>
 
+        {/* Export PDF */}
+        <TouchableOpacity
+          style={[styles.exportBtn, { backgroundColor: '#DC2626', borderRadius: colors.radius, opacity: hasValue ? 1 : 0.45, marginTop: 10 }]}
+          onPress={handleExportPdf}
+          disabled={!hasValue || exporting}
+          activeOpacity={0.85}
+        >
+          <MaterialCommunityIcons name="file-pdf-box" size={20} color="#fff" />
+          <Text style={[styles.exportBtnText, { fontFamily: 'Inter_700Bold' }]}>
+            {exporting ? 'Exporting...' : 'Export PDF'}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Share */}
         <TouchableOpacity
           style={[styles.shareBtn, { borderColor: QR_COLOR, borderRadius: colors.radius, opacity: hasValue ? 1 : 0.45 }]}
           onPress={handleShare}

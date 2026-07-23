@@ -9,6 +9,8 @@ export interface QRToolMeta {
   description: string;
   descHi: string;
   route: string;
+  /** Optional navigation params (e.g. { initialType: 'wifi' }) */
+  params?: Record<string, string>;
 }
 
 export const QR_COLOR = '#8B5CF6';
@@ -34,6 +36,72 @@ export const QR_TOOLS: QRToolMeta[] = [
     description: 'Scan QR codes from camera or gallery with history',
     descHi: 'कैमरे या गैलरी से QR कोड स्कैन करें, इतिहास के साथ',
     route: '/qr-tools/scanner',
+  },
+  {
+    id: 'qr-text',
+    name: 'Text QR',
+    nameHi: 'टेक्स्ट QR',
+    iconName: 'text',
+    color: QR_COLOR,
+    description: 'Generate QR code from any text or message',
+    descHi: 'किसी भी टेक्स्ट या संदेश से QR कोड बनाएं',
+    route: '/qr-tools/generator',
+    params: { initialType: 'text' },
+  },
+  {
+    id: 'qr-url',
+    name: 'URL QR',
+    nameHi: 'URL QR',
+    iconName: 'web',
+    color: QR_COLOR,
+    description: 'Generate QR code from a website URL or link',
+    descHi: 'वेबसाइट URL या लिंक से QR कोड बनाएं',
+    route: '/qr-tools/generator',
+    params: { initialType: 'url' },
+  },
+  {
+    id: 'qr-wifi',
+    name: 'WiFi QR',
+    nameHi: 'WiFi QR',
+    iconName: 'wifi',
+    color: QR_COLOR,
+    description: 'Share WiFi password as a scannable QR code',
+    descHi: 'WiFi पासवर्ड को स्कैन करने योग्य QR कोड के रूप में साझा करें',
+    route: '/qr-tools/generator',
+    params: { initialType: 'wifi' },
+  },
+  {
+    id: 'qr-contact',
+    name: 'Contact QR',
+    nameHi: 'संपर्क QR',
+    iconName: 'card-account-details-outline',
+    color: QR_COLOR,
+    description: 'Share contact info as a QR vCard',
+    descHi: 'संपर्क जानकारी को QR vCard के रूप में साझा करें',
+    route: '/qr-tools/generator',
+    params: { initialType: 'contact' },
+  },
+  {
+    id: 'qr-email',
+    name: 'Email QR',
+    nameHi: 'ईमेल QR',
+    iconName: 'email-outline',
+    color: QR_COLOR,
+    description: 'Generate QR code that opens email with pre-filled address',
+    descHi: 'QR कोड बनाएं जो पहले से भरे ईमेल के साथ खुले',
+    route: '/qr-tools/generator',
+    params: { initialType: 'email' },
+  },
+  {
+    id: 'qr-phone',
+    name: 'Phone QR',
+    nameHi: 'फोन QR',
+    iconName: 'phone',
+    color: QR_COLOR,
+    description: 'Generate QR code that dials a phone number',
+    descHi: 'QR कोड बनाएं जो फोन नंबर डायल करे',
+    route: '/qr-tools/generator',
+    params: { initialType: 'phone' },
   },
 ];
 

@@ -15,6 +15,7 @@ import { useApp } from '@/context/AppContext';
 import { pathsToSmooth, type StrokePath } from '@/lib/features/signature/signatureService';
 import { addHistoryEntry } from '@/lib/features/toolsHistory/db';
 import { exportFile } from '@/lib/photoTools/exportUtils';
+import { exportImageAsPdf } from '@/lib/photoTools/pdfExport';
 
 const SIG_COLOR = '#EC4899';
 const CANVAS_HEIGHT = 260;
@@ -96,6 +97,30 @@ export default function SignatureMakerScreen() {
       await exportFile(uri, fileName);
     } catch (e: any) {
       Alert.alert('Export failed', e?.message ?? 'Unknown error');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleExportPdf = async () => {
+    if (!hasDrawing) { Alert.alert('Empty canvas', 'Please draw your signature first.'); return; }
+    if (Platform.OS === 'web') { Alert.alert('Not supported', 'PDF export from canvas requires the native app.'); return; }
+    setExporting(true);
+    try {
+      const uri = await captureSignature();
+      if (!uri || uri.length < 10) throw new Error('Capture failed');
+      const fileName = `Signature-${Date.now()}.pdf`;
+      const pdfUri = await exportImageAsPdf(uri, fileName, `Digital Signature — ${strokes.length} strokes`);
+      await addHistoryEntry({
+        category: 'signature',
+        toolId: 'signature-maker',
+        title: 'Signature (PDF)',
+        detail: `${strokes.length} strokes`,
+        outputUri: pdfUri,
+      });
+      await exportFile(pdfUri, fileName);
+    } catch (e: any) {
+      Alert.alert('PDF Export failed', e?.message ?? 'Unknown error');
     } finally {
       setExporting(false);
     }
@@ -293,6 +318,17 @@ export default function SignatureMakerScreen() {
           <MaterialCommunityIcons name="download" size={20} color="#fff" />
           <Text style={[styles.exportBtnText, { fontFamily: 'Inter_700Bold' }]}>
             {exporting ? 'Exporting...' : 'Export PNG'}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.exportBtn, { backgroundColor: '#DC2626', borderRadius: colors.radius, opacity: hasDrawing ? 1 : 0.45, marginTop: 10 }]}
+          onPress={handleExportPdf}
+          disabled={!hasDrawing || exporting}
+        >
+          <MaterialCommunityIcons name="file-pdf-box" size={20} color="#fff" />
+          <Text style={[styles.exportBtnText, { fontFamily: 'Inter_700Bold' }]}>
+            {exporting ? 'Exporting...' : 'Export PDF'}
           </Text>
         </TouchableOpacity>
 

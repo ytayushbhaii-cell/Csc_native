@@ -19,6 +19,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { useApp } from '@/context/AppContext';
 import { addHistoryEntry } from '@/lib/features/toolsHistory/db';
 import { exportFile } from '@/lib/photoTools/exportUtils';
+import { exportImageAsPdf } from '@/lib/photoTools/pdfExport';
 
 const STAMP_COLOR = '#F43F5E';
 const STAMP_SIZE = 260;
@@ -168,6 +169,24 @@ export default function CSCStampScreen() {
     }
   };
 
+  const handleExportPdf = async () => {
+    if (!viewShotRef.current) return;
+    if (Platform.OS === 'web') { Alert.alert('Not supported', 'PDF export from canvas requires the native app.'); return; }
+    setExporting(true);
+    try {
+      const uri: string = await (viewShotRef.current as any).capture();
+      if (!uri || uri.length < 10) throw new Error('Capture failed');
+      const fileName = `CSC-Stamp-${Date.now()}.pdf`;
+      const pdfUri = await exportImageAsPdf(uri, fileName, `CSC Service Centre Stamp — ${cfg.vleName || 'VLE'}`);
+      await addHistoryEntry({ category: 'stamp', toolId: 'csc-stamp', title: 'CSC Stamp (PDF)', detail: cfg.vleName || 'CSC Service Centre', outputUri: pdfUri });
+      await exportFile(pdfUri, fileName);
+    } catch (e: any) {
+      Alert.alert('PDF Export failed', e?.message ?? 'Unknown error');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const handleShare = async () => {
     if (!viewShotRef.current) return;
     setExporting(true);
@@ -295,6 +314,18 @@ export default function CSCStampScreen() {
           <MaterialCommunityIcons name="download" size={20} color="#fff" />
           <Text style={[styles.exportBtnText, { fontFamily: 'Inter_700Bold' }]}>
             {exporting ? 'Exporting…' : 'Export PNG'}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.exportBtn, { backgroundColor: '#DC2626', borderRadius: colors.radius, marginTop: 10 }]}
+          onPress={handleExportPdf}
+          disabled={exporting}
+          activeOpacity={0.85}
+        >
+          <MaterialCommunityIcons name="file-pdf-box" size={20} color="#fff" />
+          <Text style={[styles.exportBtnText, { fontFamily: 'Inter_700Bold' }]}>
+            {exporting ? 'Exporting…' : 'Export PDF'}
           </Text>
         </TouchableOpacity>
 
