@@ -1,0 +1,73 @@
+workflows:
+  csc-smart-toolkit-android:
+    name: CSC Smart Toolkit — Android Release
+    max_build_duration: 60
+    environment:
+      android_signing:
+        - csc_release_keystore
+      vars:
+        PACKAGE_NAME: "com.cscsmarttoolkit.app"
+        NODE_VERSION: "20"
+      node: 20.18.0
+      java: 17
+
+    scripts:
+      # ── Install pnpm ─────────────────────────────────────────────────────────
+      - name: Install pnpm
+        script: npm install -g pnpm@latest
+
+      # ── JS dependencies ──────────────────────────────────────────────────────
+      - name: Install JS dependencies
+        script: |
+          cd $CM_BUILD_DIR/Offline-Smart-Toolkit
+          pnpm install --frozen-lockfile
+
+      # ── Android local.properties ─────────────────────────────────────────────
+      - name: Set Android SDK path
+        script: |
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > \
+            $CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android/local.properties
+
+      # ── key.properties for release signing ──────────────────────────────────
+      - name: Set up release signing
+        script: |
+          cat > $CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android/key.properties <<EOF
+          storeFile=$CM_KEYSTORE_PATH
+          storePassword=$CM_KEYSTORE_PASSWORD
+          keyAlias=$CM_KEY_ALIAS
+          keyPassword=$CM_KEY_PASSWORD
+          EOF
+
+      # ── Build Release APK ────────────────────────────────────────────────────
+      - name: Build Release APK
+        script: |
+          cd $CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android
+          ./gradlew assembleRelease \
+            --no-daemon \
+            --stacktrace \
+            -PandroidEnableHermes=true
+
+      # ── Build Release AAB (Play Store) ───────────────────────────────────────
+      - name: Build Release AAB
+        script: |
+          cd $CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android
+          ./gradlew bundleRelease \
+            --no-daemon \
+            --stacktrace \
+            -PandroidEnableHermes=true
+
+    artifacts:
+      # Release APK
+      - Offline-Smart-Toolkit/artifacts/mobile/android/app/build/outputs/apk/release/*.apk
+      # Play Store AAB
+      - Offline-Smart-Toolkit/artifacts/mobile/android/app/build/outputs/bundle/release/*.aab
+      # Build logs
+      - Offline-Smart-Toolkit/artifacts/mobile/android/app/build/outputs/mapping/release/mapping.txt
+
+    publishing:
+      email:
+        recipients:
+          - your@email.com          # <-- apna email daalo
+        notify:
+          success: true
+          failure: true
