@@ -7,13 +7,10 @@ workflows:
       java: 17
 
     scripts:
-      - name: Install pnpm
-        script: npm install -g pnpm@latest
-
       - name: Install JS dependencies
         script: |
-          cd $CM_BUILD_DIR/Offline-Smart-Toolkit
-          pnpm install --no-frozen-lockfile
+          cd $CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile
+          npm install --legacy-peer-deps
 
       - name: Set Android SDK path
         script: |
