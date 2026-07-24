@@ -44,21 +44,27 @@ workflows:
       - name: Build Release APK
         script: |
           cd $CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android
+          mkdir -p $CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs
           ./gradlew assembleRelease \
             --no-daemon \
+            --console=plain \
             --stacktrace \
-            -PREACT_NATIVE_VERSION=0.81.5 \
-            -PhermesEnabled=true
+            -PhermesEnabled=true \
+            2>&1 | tee $CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs/release-apk.log
+          exit ${PIPESTATUS[0]}
 
       # ── Build Release AAB (Play Store) ───────────────────────────────────────
       - name: Build Release AAB
         script: |
           cd $CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android
+          mkdir -p $CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs
           ./gradlew bundleRelease \
             --no-daemon \
+            --console=plain \
             --stacktrace \
-            -PREACT_NATIVE_VERSION=0.81.5 \
-            -PhermesEnabled=true
+            -PhermesEnabled=true \
+            2>&1 | tee $CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs/release-aab.log
+          exit ${PIPESTATUS[0]}
 
     artifacts:
       # Release APK
@@ -67,6 +73,7 @@ workflows:
       - Offline-Smart-Toolkit/artifacts/mobile/android/app/build/outputs/bundle/release/*.aab
       # Build logs
       - Offline-Smart-Toolkit/artifacts/mobile/android/app/build/outputs/mapping/release/mapping.txt
+      - Offline-Smart-Toolkit/build-logs/*.log
 
     publishing:
       email:

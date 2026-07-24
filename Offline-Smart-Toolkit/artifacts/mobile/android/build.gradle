@@ -14,10 +14,10 @@ buildscript {
         // ── Kotlin / AGP ─────────────────────────────────────────────────────
         // React Native 0.81's Gradle plugin is built against this AGP/Kotlin pair.
         kotlinVersion = "2.1.20"
-        // RN 0.81 publishes the Android runtime as react-android. Some
-        // autolinked libraries (including slider 5.x) still request the
-        // pre-0.76 react-native Maven artifact.
-        reactNativeVersion = findProperty("REACT_NATIVE_VERSION") ?: "0.81.5"
+        // RN 0.81 publishes the Android runtime as react-android. Keep this
+        // value available to older autolinked libraries that read it from the
+        // root project (for example keyboard-controller and view-shot).
+        reactNativeVersion = "0.81.5"
     }
 
     repositories {
@@ -42,18 +42,24 @@ allprojects {
         maven { url 'https://www.jitpack.io' }
     }
 
-    // Keep legacy React Native Android library dependencies compatible with
-    // RN 0.81 without modifying files inside node_modules. RN 0.81 no longer
-    // publishes the old com.facebook.react:react-native Maven coordinate.
+    // RN 0.81's plugin applies this substitution from the app plugin's
+    // afterEvaluate hook. Apply the same rule at the root as well so every
+    // autolinked library is covered deterministically, even if its Gradle
+    // configuration is evaluated before the app project.
     configurations.configureEach {
-        resolutionStrategy.eachDependency { details ->
-            if (details.requested.group == "com.facebook.react" &&
-                details.requested.name == "react-native") {
-                details.useTarget(
-                    "com.facebook.react:react-android:${rootProject.ext.reactNativeVersion}"
-                )
-                details.because("React Native 0.81 publishes react-android instead of react-native")
-            }
+        resolutionStrategy.dependencySubstitution {
+            substitute module("com.facebook.react:react-native") using module(
+                "com.facebook.react:react-android:${rootProject.ext.reactNativeVersion}"
+            )
+            substitute module("com.facebook.react:hermes-engine") using module(
+                "com.facebook.react:hermes-android:${rootProject.ext.reactNativeVersion}"
+            )
         }
+        resolutionStrategy.force(
+            "com.facebook.react:react-android:${rootProject.ext.reactNativeVersion}"
+        )
+        resolutionStrategy.force(
+            "com.facebook.react:hermes-android:${rootProject.ext.reactNativeVersion}"
+        )
     }
 }
