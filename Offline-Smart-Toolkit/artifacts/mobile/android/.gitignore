@@ -14,7 +14,6 @@ local.properties
 *.jsbundle
 
 # ── Release signing ─────────────────────────────────────────────────────────
-# IMPORTANT: key.properties and release.keystore contain production credentials.
-# Never commit these to source control. Back them up securely elsewhere.
-key.properties
-app/release.keystore
+# key.properties and release.keystore are intentionally tracked so Codemagic
+# CI can build without needing Codemagic's code-signing UI.
+# Keep a secure offline backup of release.keystore.
