@@ -45,7 +45,7 @@ workflows:
           ./gradlew assembleRelease \
             --no-daemon \
             --stacktrace \
-            -PandroidEnableHermes=true
+            -PhermesEnabled=true
 
       # ── Build Release AAB (Play Store) ───────────────────────────────────────
       - name: Build Release AAB
@@ -54,7 +54,7 @@ workflows:
           ./gradlew bundleRelease \
             --no-daemon \
             --stacktrace \
-            -PandroidEnableHermes=true
+            -PhermesEnabled=true
 
     artifacts:
       # Release APK

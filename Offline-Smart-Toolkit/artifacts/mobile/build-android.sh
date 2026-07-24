@@ -26,14 +26,15 @@ JAVA_VER=$(java -version 2>&1 | awk -F '"' '/version/ {print $2}' | cut -d'.' -f
 [[ "$JAVA_VER" -ge 17 ]] || error "Java 17+ required (found $JAVA_VER)."
 success "Java $JAVA_VER"
 
-[[ -n "${ANDROID_HOME:-}" ]] || error "ANDROID_HOME is not set. Install Android SDK and set ANDROID_HOME."
-[[ -d "$ANDROID_HOME" ]]    || error "ANDROID_HOME=$ANDROID_HOME does not exist."
-success "Android SDK: $ANDROID_HOME"
+ANDROID_SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+[[ -n "$ANDROID_SDK" ]] || error "Android SDK is not set. Set ANDROID_HOME or ANDROID_SDK_ROOT."
+[[ -d "$ANDROID_SDK" ]]  || error "Android SDK=$ANDROID_SDK does not exist."
+success "Android SDK: $ANDROID_SDK"
 
 # ── Create local.properties if missing ────────────────────────────────────
 if [[ ! -f "$ANDROID_DIR/local.properties" ]]; then
     info "Creating android/local.properties…"
-    echo "sdk.dir=$ANDROID_HOME" > "$ANDROID_DIR/local.properties"
+    echo "sdk.dir=$ANDROID_SDK" > "$ANDROID_DIR/local.properties"
     success "local.properties created"
 fi
 

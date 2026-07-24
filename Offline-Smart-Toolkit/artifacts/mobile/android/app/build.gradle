@@ -4,13 +4,23 @@ apply plugin: "com.facebook.react"
 
 /**
  * React Native configuration.
- * Direct paths from android/ → ../node_modules (npm layout).
+ * Prefer the npm layout used by Codemagic, with a pnpm workspace fallback.
  */
+def mobileNodeModules = file("../../node_modules")
+def workspaceNodeModules = file("../../../node_modules/.pnpm/node_modules")
+def reactNativeNodeModules = mobileNodeModules.exists() ? mobileNodeModules : workspaceNodeModules
+def codegenDir = file("${reactNativeNodeModules}/@react-native/codegen")
+if (!codegenDir.exists()) {
+    codegenDir = file("${workspaceNodeModules}/@react-native/codegen")
+}
+def mobileRoot = file("../..")
+def reactNativeDir = file("${mobileRoot}/node_modules/react-native")
+
 react {
-    entryFile    = file("../index.js")
-    reactNativeDir = file("../node_modules/react-native")
-    hermesCommand  = "../node_modules/react-native/sdks/hermesc/%OS-BIN%/hermesc"
-    codegenDir   = file("../node_modules/@react-native/codegen")
+    entryFile    = file("${mobileRoot}/index.js")
+    reactNativeDir = reactNativeDir
+    hermesCommand  = "${reactNativeDir}/sdks/hermesc/%OS-BIN%/hermesc"
+    codegenDir   = codegenDir
 }
 
 // ── Release signing from key.properties ──────────────────────────────────────
@@ -34,9 +44,6 @@ android {
         versionCode     8
         versionName     "8.0.0"
         multiDexEnabled true
-        ndk {
-            abiFilters "arm64-v8a"
-        }
     }
 
     signingConfigs {

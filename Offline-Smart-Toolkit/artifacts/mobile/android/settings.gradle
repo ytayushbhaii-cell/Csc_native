@@ -1,6 +1,10 @@
 pluginManagement {
-    // npm installs to mobile/node_modules — path from android/ is ../node_modules
-    includeBuild("../node_modules/@react-native/gradle-plugin")
+    // npm installs to mobile/node_modules. In the pnpm workspace, React Native's
+    // Gradle plugin is exposed from the workspace virtual-store node_modules.
+    def localPlugin = file("../node_modules/@react-native/gradle-plugin")
+    def workspacePlugin = file("../../../node_modules/.pnpm/node_modules/@react-native/gradle-plugin")
+    def reactNativeGradlePlugin = (localPlugin.exists() ? localPlugin : workspacePlugin).canonicalFile
+    includeBuild(reactNativeGradlePlugin.absolutePath)
     repositories {
         google()
         mavenCentral()
@@ -14,14 +18,6 @@ plugins {
 
 extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
     ex.autolinkLibrariesFromCommand()
-}
-
-// Dependency substitution so older native modules that reference the plugin
-// by Maven coordinate can resolve it via the composite build.
-includeBuild("../node_modules/@react-native/gradle-plugin") {
-    dependencySubstitution {
-        substitute(module("com.facebook.react:react-native-gradle-plugin")).using(project(":"))
-    }
 }
 
 rootProject.name = 'CSC Smart Toolkit'

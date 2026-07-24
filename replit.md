@@ -70,8 +70,19 @@ Models are downloaded via `ModelDownloadGate` with real-time progress, resume su
 
 ## Android build
 
-Requires Android SDK + JDK. Not available in this Replit environment.
-To build: `cd Offline-Smart-Toolkit/artifacts/mobile/android && ./gradlew assembleRelease`
+Requires Android SDK + JDK 17. The native project uses React Native 0.81,
+AGP 8.11, Kotlin 2.1.20, and Gradle 8.13.
+
+```bash
+cd Offline-Smart-Toolkit/artifacts/mobile
+pnpm install --frozen-lockfile
+./build-android.sh release
+./build-android.sh bundle
+```
+
+Set either `ANDROID_HOME` or `ANDROID_SDK_ROOT` before building. This Replit
+workspace does not include an Android SDK, so release APK/AAB verification must
+run in an Android-equipped CI environment such as Codemagic.
 
 ## User preferences
 
