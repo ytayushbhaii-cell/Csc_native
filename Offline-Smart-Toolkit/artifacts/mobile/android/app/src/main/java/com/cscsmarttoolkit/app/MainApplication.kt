@@ -9,7 +9,8 @@ import com.facebook.react.ReactNativeHost
 import com.facebook.react.ReactPackage
 import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
 import com.facebook.react.defaults.DefaultReactNativeHost
-import com.facebook.react.ReactNativeApplicationEntryPoint.loadReactNative
+import com.facebook.react.soloader.OpenSourceMergedSoMapping
+import com.facebook.soloader.SoLoader
 
 class MainApplication : Application(), ReactApplication {
 
@@ -31,7 +32,9 @@ class MainApplication : Application(), ReactApplication {
 
     override fun onCreate() {
         super.onCreate()
-        loadReactNative(this)
+        // SoLoader initialises Hermes / JSC native libraries.
+        // OpenSourceMergedSoMapping is the standard mapping for RN 0.74+.
+        SoLoader.init(this, OpenSourceMergedSoMapping)
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {

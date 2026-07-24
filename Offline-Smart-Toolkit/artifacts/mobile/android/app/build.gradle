@@ -4,14 +4,13 @@ apply plugin: "com.facebook.react"
 
 /**
  * React Native configuration.
- * Uses direct relative paths from android/ → ../node_modules
- * (npm installs packages in mobile/node_modules/).
+ * Direct paths from android/ → ../node_modules (npm layout).
  */
 react {
-    entryFile = file("../index.js")
+    entryFile    = file("../index.js")
     reactNativeDir = file("../node_modules/react-native")
-    hermesCommand = "../node_modules/react-native/sdks/hermesc/%OS-BIN%/hermesc"
-    codegenDir = file("../node_modules/@react-native/codegen")
+    hermesCommand  = "../node_modules/react-native/sdks/hermesc/%OS-BIN%/hermesc"
+    codegenDir   = file("../node_modules/@react-native/codegen")
 }
 
 // ── Release signing from key.properties ──────────────────────────────────────
@@ -22,18 +21,18 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    ndkVersion rootProject.ext.ndkVersion
-    compileSdk rootProject.ext.compileSdkVersion
+    ndkVersion       rootProject.ext.ndkVersion
+    compileSdk       rootProject.ext.compileSdkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
 
     namespace "com.cscsmarttoolkit.app"
 
     defaultConfig {
-        applicationId "com.cscsmarttoolkit.app"
-        minSdk rootProject.ext.minSdkVersion
-        targetSdk rootProject.ext.targetSdkVersion
-        versionCode 8
-        versionName "8.0.0"
+        applicationId   "com.cscsmarttoolkit.app"
+        minSdk          rootProject.ext.minSdkVersion
+        targetSdk       rootProject.ext.targetSdkVersion
+        versionCode     8
+        versionName     "8.0.0"
         multiDexEnabled true
         ndk {
             abiFilters "arm64-v8a"
@@ -42,15 +41,15 @@ android {
 
     signingConfigs {
         debug {
-            storeFile file('debug.keystore')
+            storeFile    file('debug.keystore')
             storePassword 'android'
-            keyAlias 'androiddebugkey'
-            keyPassword 'android'
+            keyAlias     'androiddebugkey'
+            keyPassword  'android'
         }
         release {
-            storeFile file(keystorePropertiesFile.exists()
-                ? keystoreProperties['storeFile']
-                : (System.getenv("RELEASE_KEYSTORE_PATH") ?: 'debug.keystore'))
+            storeFile keystorePropertiesFile.exists()
+                ? file(keystoreProperties['storeFile'])
+                : file(System.getenv("RELEASE_KEYSTORE_PATH") ?: 'debug.keystore')
             storePassword keystorePropertiesFile.exists()
                 ? keystoreProperties['storePassword']
                 : (System.getenv("RELEASE_KEYSTORE_PASSWORD") ?: 'android')
@@ -66,25 +65,23 @@ android {
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
-            debuggable true
-            applicationIdSuffix ".debug"
-            versionNameSuffix "-debug"
+            debuggable    true
         }
         release {
-            signingConfig signingConfigs.release
-            minifyEnabled false
-            shrinkResources false
+            signingConfig    signingConfigs.release
+            minifyEnabled    false
+            shrinkResources  false
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
-            debuggable false
+            debuggable       false
         }
     }
 
     splits {
         abi {
             reset()
-            enable true
+            enable       true
             universalApk false
-            include "arm64-v8a"
+            include      "arm64-v8a"
         }
     }
 
@@ -92,7 +89,7 @@ android {
         pickFirst '**/libc++_shared.so'
         pickFirst '**/libfbjni.so'
         pickFirst '**/libonnxruntime.so'
-        exclude '**/libjsc.so'
+        exclude   '**/libjsc.so'
     }
 
     androidResources {
@@ -100,7 +97,7 @@ android {
     }
 
     lint {
-        abortOnError false
+        abortOnError      false
         checkReleaseBuilds false
     }
 

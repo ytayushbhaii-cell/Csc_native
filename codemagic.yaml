@@ -7,25 +7,37 @@ workflows:
       java: 17
 
     scripts:
+      # ── 1. JS dependencies ────────────────────────────────────────────────
       - name: Install JS dependencies
         script: |
           cd $CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile
           npm install --legacy-peer-deps
 
+      # ── 2. Android SDK licences + SDK 35 ─────────────────────────────────
+      - name: Accept Android SDK licences
+        script: |
+          yes | sdkmanager --licenses 2>/dev/null || true
+          sdkmanager \
+            "platforms;android-35" \
+            "build-tools;35.0.0" \
+            "ndk;27.1.12297006" 2>/dev/null || true
+          echo "SDK setup done"
+
+      # ── 3. local.properties ───────────────────────────────────────────────
       - name: Set Android SDK path
         script: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > \
             $CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android/local.properties
 
+      # ── 4. Verify signing files ───────────────────────────────────────────
       - name: Verify signing files
         script: |
-          KEY_PROPS="$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android/key.properties"
-          KEYSTORE="$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android/app/release.keystore"
-          if [ ! -f "$KEY_PROPS" ]; then echo "ERROR: key.properties missing"; exit 1; fi
-          if [ ! -f "$KEYSTORE" ]; then echo "ERROR: release.keystore missing"; exit 1; fi
-          echo "Signing files OK"
-          cat "$KEY_PROPS"
+          KEY="$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android/key.properties"
+          KS="$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android/app/release.keystore"
+          [ -f "$KEY" ] && echo "key.properties OK" || { echo "MISSING: key.properties"; exit 1; }
+          [ -f "$KS"  ] && echo "release.keystore OK" || { echo "MISSING: release.keystore"; exit 1; }
 
+      # ── 5. Release APK ────────────────────────────────────────────────────
       - name: Build Release APK
         script: |
           export PATH="$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/node_modules/.bin:$PATH"
@@ -34,8 +46,9 @@ workflows:
           ./gradlew assembleRelease \
             --no-daemon \
             --stacktrace \
-            -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=512m"
+            --warning-mode all
 
+      # ── 6. Release AAB ────────────────────────────────────────────────────
       - name: Build Release AAB
         script: |
           export PATH="$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/node_modules/.bin:$PATH"
@@ -43,7 +56,7 @@ workflows:
           ./gradlew bundleRelease \
             --no-daemon \
             --stacktrace \
-            -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=512m"
+            --warning-mode all
 
     artifacts:
       - Offline-Smart-Toolkit/artifacts/mobile/android/app/build/outputs/apk/release/*.apk
