@@ -3,9 +3,6 @@ workflows:
     name: CSC Smart Toolkit — Android Release
     max_build_duration: 60
     environment:
-      # Codemagic managed keystore (add via App Settings → Code signing → Android)
-      android_signing:
-        - csc_release_keystore
       vars:
         PACKAGE_NAME: "com.cscsmarttoolkit.app"
       node: 20.18.0
