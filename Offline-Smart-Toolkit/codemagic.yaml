@@ -3,75 +3,87 @@ workflows:
     name: CSC Smart Toolkit — Android Release
     max_build_duration: 60
     environment:
+      # Codemagic managed keystore (add via App Settings → Code signing → Android)
       android_signing:
         - csc_release_keystore
       vars:
         PACKAGE_NAME: "com.cscsmarttoolkit.app"
-        NODE_VERSION: "20"
       node: 20.18.0
       java: 17
 
     scripts:
-      # ── Install the lockfile-compatible package manager ──────────────────────
+      # ── 1. pnpm ────────────────────────────────────────────────────────────
       - name: Install pnpm
         script: npm install -g pnpm@10.26.1
 
-      # ── JS dependencies ──────────────────────────────────────────────────────
+      # ── 2. JS dependencies (pnpm workspace) ───────────────────────────────
       - name: Install JS dependencies
         script: |
           cd $CM_BUILD_DIR/Offline-Smart-Toolkit
-          pnpm --version
           pnpm install --frozen-lockfile
 
-      # ── Android local.properties ─────────────────────────────────────────────
+      # ── 3. local.properties ───────────────────────────────────────────────
       - name: Set Android SDK path
         script: |
           test -n "$ANDROID_SDK_ROOT" || { echo "ANDROID_SDK_ROOT is not set"; exit 1; }
           echo "sdk.dir=$ANDROID_SDK_ROOT" > \
             $CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android/local.properties
 
-      # ── key.properties for release signing ──────────────────────────────────
+      # ── 4. key.properties for release signing ────────────────────────────
+      # Uses Codemagic's android_signing integration env vars.
+      # Fallback: key.properties is already committed for local CI.
       - name: Set up release signing
         script: |
-          cat > $CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android/key.properties <<EOF
+          KEY="$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android/key.properties"
+          KS="$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android/app/release.keystore"
+          if [ -n "$CM_KEYSTORE_PATH" ]; then
+            cat > "$KEY" <<EOF
           storeFile=$CM_KEYSTORE_PATH
           storePassword=$CM_KEYSTORE_PASSWORD
           keyAlias=$CM_KEY_ALIAS
           keyPassword=$CM_KEY_PASSWORD
           EOF
+            echo "Signing: using Codemagic managed keystore"
+          elif [ -f "$KEY" ] && [ -f "$KS" ]; then
+            echo "Signing: using committed key.properties + release.keystore"
+          else
+            echo "ERROR: No signing credentials found."; exit 1
+          fi
 
-      # ── Build Release APK ────────────────────────────────────────────────────
+      # ── 5. Release APK ────────────────────────────────────────────────────
       - name: Build Release APK
         script: |
-          cd $CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android
+          export PATH="$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/node_modules/.bin:$PATH"
           mkdir -p $CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs
+          cd $CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android
+          chmod +x gradlew
           ./gradlew assembleRelease \
             --no-daemon \
             --console=plain \
+            --max-workers 2 \
             --stacktrace \
             -PhermesEnabled=true \
             2>&1 | tee $CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs/release-apk.log
           exit ${PIPESTATUS[0]}
 
-      # ── Build Release AAB (Play Store) ───────────────────────────────────────
+      # ── 6. Release AAB (Play Store) ───────────────────────────────────────
       - name: Build Release AAB
         script: |
-          cd $CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android
+          export PATH="$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/node_modules/.bin:$PATH"
           mkdir -p $CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs
+          cd $CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android
           ./gradlew bundleRelease \
             --no-daemon \
             --console=plain \
+            --max-workers 2 \
             --stacktrace \
             -PhermesEnabled=true \
             2>&1 | tee $CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs/release-aab.log
           exit ${PIPESTATUS[0]}
 
     artifacts:
-      # Release APK
       - Offline-Smart-Toolkit/artifacts/mobile/android/app/build/outputs/apk/release/*.apk
-      # Play Store AAB
       - Offline-Smart-Toolkit/artifacts/mobile/android/app/build/outputs/bundle/release/*.aab
-      # Build logs
       - Offline-Smart-Toolkit/artifacts/mobile/android/app/build/outputs/mapping/release/mapping.txt
       - Offline-Smart-Toolkit/build-logs/*.log
 

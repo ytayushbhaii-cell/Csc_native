@@ -3,69 +3,95 @@ workflows:
     name: CSC Smart Toolkit — Android Release
     max_build_duration: 60
     environment:
+      # Codemagic managed keystore (add via App Settings → Code signing → Android)
+      android_signing:
+        - csc_release_keystore
+      vars:
+        PACKAGE_NAME: "com.cscsmarttoolkit.app"
       node: 20.18.0
       java: 17
 
     scripts:
-      # ── 1. JS dependencies ────────────────────────────────────────────────
+      # ── 1. pnpm ────────────────────────────────────────────────────────────
+      - name: Install pnpm
+        script: npm install -g pnpm@10.26.1
+
+      # ── 2. JS dependencies (pnpm workspace) ───────────────────────────────
       - name: Install JS dependencies
         script: |
-          cd $CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile
-          npm install --legacy-peer-deps
-
-      # ── 2. Android SDK licences + SDK 35 ─────────────────────────────────
-      - name: Accept Android SDK licences
-        script: |
-          yes | sdkmanager --licenses 2>/dev/null || true
-          sdkmanager \
-            "platforms;android-35" \
-            "build-tools;35.0.0" \
-            "ndk;27.1.12297006" 2>/dev/null || true
-          echo "SDK setup done"
+          cd $CM_BUILD_DIR/Offline-Smart-Toolkit
+          pnpm install --frozen-lockfile
 
       # ── 3. local.properties ───────────────────────────────────────────────
       - name: Set Android SDK path
         script: |
+          test -n "$ANDROID_SDK_ROOT" || { echo "ANDROID_SDK_ROOT is not set"; exit 1; }
           echo "sdk.dir=$ANDROID_SDK_ROOT" > \
             $CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android/local.properties
 
-      # ── 4. Verify signing files ───────────────────────────────────────────
-      - name: Verify signing files
+      # ── 4. key.properties for release signing ────────────────────────────
+      # Uses Codemagic's android_signing integration env vars.
+      # Fallback: key.properties is already committed for local CI.
+      - name: Set up release signing
         script: |
           KEY="$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android/key.properties"
           KS="$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android/app/release.keystore"
-          [ -f "$KEY" ] && echo "key.properties OK" || { echo "MISSING: key.properties"; exit 1; }
-          [ -f "$KS"  ] && echo "release.keystore OK" || { echo "MISSING: release.keystore"; exit 1; }
+          if [ -n "$CM_KEYSTORE_PATH" ]; then
+            # Codemagic managed keystore via android_signing integration
+            cat > "$KEY" <<EOF
+          storeFile=$CM_KEYSTORE_PATH
+          storePassword=$CM_KEYSTORE_PASSWORD
+          keyAlias=$CM_KEY_ALIAS
+          keyPassword=$CM_KEY_PASSWORD
+          EOF
+            echo "Signing: using Codemagic managed keystore"
+          elif [ -f "$KEY" ] && [ -f "$KS" ]; then
+            echo "Signing: using committed key.properties + release.keystore"
+          else
+            echo "ERROR: No signing credentials found. Add android_signing to Codemagic or commit key.properties."; exit 1
+          fi
 
       # ── 5. Release APK ────────────────────────────────────────────────────
       - name: Build Release APK
         script: |
           export PATH="$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/node_modules/.bin:$PATH"
+          mkdir -p $CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs
           cd $CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android
           chmod +x gradlew
           ./gradlew assembleRelease \
             --no-daemon \
+            --console=plain \
+            --max-workers 2 \
             --stacktrace \
-            --warning-mode all
+            -PhermesEnabled=true \
+            2>&1 | tee $CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs/release-apk.log
+          exit ${PIPESTATUS[0]}
 
-      # ── 6. Release AAB ────────────────────────────────────────────────────
+      # ── 6. Release AAB (Play Store) ───────────────────────────────────────
       - name: Build Release AAB
         script: |
           export PATH="$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/node_modules/.bin:$PATH"
+          mkdir -p $CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs
           cd $CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android
           ./gradlew bundleRelease \
             --no-daemon \
+            --console=plain \
+            --max-workers 2 \
             --stacktrace \
-            --warning-mode all
+            -PhermesEnabled=true \
+            2>&1 | tee $CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs/release-aab.log
+          exit ${PIPESTATUS[0]}
 
     artifacts:
       - Offline-Smart-Toolkit/artifacts/mobile/android/app/build/outputs/apk/release/*.apk
       - Offline-Smart-Toolkit/artifacts/mobile/android/app/build/outputs/bundle/release/*.aab
+      - Offline-Smart-Toolkit/artifacts/mobile/android/app/build/outputs/mapping/release/mapping.txt
+      - Offline-Smart-Toolkit/build-logs/*.log
 
     publishing:
       email:
         recipients:
-          - your@email.com
+          - your@email.com          # <-- apna email daalo
         notify:
           success: true
           failure: true
