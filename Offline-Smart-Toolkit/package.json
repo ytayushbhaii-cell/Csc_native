@@ -2,6 +2,7 @@
   "name": "offline-smart-toolkit",
   "version": "1.0.0",
   "private": true,
+  "packageManager": "pnpm@10.26.1",
   "dependencies": {
     "@replit/connectors-sdk": "^0.4.1"
   },

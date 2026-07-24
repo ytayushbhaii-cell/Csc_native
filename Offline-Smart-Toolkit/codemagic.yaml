@@ -12,14 +12,15 @@ workflows:
       java: 17
 
     scripts:
-      # ── Install pnpm ─────────────────────────────────────────────────────────
+      # ── Install the lockfile-compatible package manager ──────────────────────
       - name: Install pnpm
-        script: npm install -g pnpm@latest
+        script: npm install -g pnpm@10.26.1
 
       # ── JS dependencies ──────────────────────────────────────────────────────
       - name: Install JS dependencies
         script: |
           cd $CM_BUILD_DIR/Offline-Smart-Toolkit
+          pnpm --version
           pnpm install --frozen-lockfile
 
       # ── Android local.properties ─────────────────────────────────────────────
