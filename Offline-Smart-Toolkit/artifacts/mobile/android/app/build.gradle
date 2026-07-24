@@ -3,17 +3,18 @@ apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
 /**
- * React Native CLI configuration block.
- * entryFile points to index.js at the project root (standard RN CLI convention).
+ * React Native configuration.
+ * Uses direct relative paths from android/ → ../node_modules
+ * (npm installs packages in mobile/node_modules/).
  */
 react {
     entryFile = file("../index.js")
-    reactNativeDir = new File(["node", "--print", "require.resolve('react-native/package.json')"].execute(null, rootDir).text.trim()).getParentFile().getAbsoluteFile()
-    hermesCommand = new File(["node", "--print", "require.resolve('react-native/package.json')"].execute(null, rootDir).text.trim()).getParentFile().getAbsolutePath() + "/sdks/hermesc/%OS-BIN%/hermesc"
-    codegenDir = new File(["node", "--print", "require.resolve('@react-native/codegen/package.json', { paths: [require.resolve('react-native/package.json')] })"].execute(null, rootDir).text.trim()).getParentFile().getAbsoluteFile()
+    reactNativeDir = file("../node_modules/react-native")
+    hermesCommand = "../node_modules/react-native/sdks/hermesc/%OS-BIN%/hermesc"
+    codegenDir = file("../node_modules/@react-native/codegen")
 }
 
-// ── Release signing from key.properties ─────────────────────────────────────
+// ── Release signing from key.properties ──────────────────────────────────────
 def keystorePropertiesFile = rootProject.file("key.properties")
 def keystoreProperties = new Properties()
 if (keystorePropertiesFile.exists()) {
@@ -31,11 +32,9 @@ android {
         applicationId "com.cscsmarttoolkit.app"
         minSdk rootProject.ext.minSdkVersion
         targetSdk rootProject.ext.targetSdkVersion
-        versionCode 8          // Phase 8 — increment for every Play Store upload
+        versionCode 8
         versionName "8.0.0"
         multiDexEnabled true
-
-        // Bundle only arm64-v8a for Play Store (arm32 via separate track if needed)
         ndk {
             abiFilters "arm64-v8a"
         }
@@ -49,18 +48,18 @@ android {
             keyPassword 'android'
         }
         release {
-            if (keystorePropertiesFile.exists()) {
-                storeFile file(keystoreProperties['storeFile'])
-                storePassword keystoreProperties['storePassword']
-                keyAlias keystoreProperties['keyAlias']
-                keyPassword keystoreProperties['keyPassword']
-            } else {
-                // CI/CD fallback: set these as environment variables in your pipeline
-                storeFile file(System.getenv("RELEASE_KEYSTORE_PATH") ?: 'debug.keystore')
-                storePassword System.getenv("RELEASE_KEYSTORE_PASSWORD") ?: 'android'
-                keyAlias System.getenv("RELEASE_KEY_ALIAS") ?: 'androiddebugkey'
-                keyPassword System.getenv("RELEASE_KEY_PASSWORD") ?: 'android'
-            }
+            storeFile file(keystorePropertiesFile.exists()
+                ? keystoreProperties['storeFile']
+                : (System.getenv("RELEASE_KEYSTORE_PATH") ?: 'debug.keystore'))
+            storePassword keystorePropertiesFile.exists()
+                ? keystoreProperties['storePassword']
+                : (System.getenv("RELEASE_KEYSTORE_PASSWORD") ?: 'android')
+            keyAlias keystorePropertiesFile.exists()
+                ? keystoreProperties['keyAlias']
+                : (System.getenv("RELEASE_KEY_ALIAS") ?: 'androiddebugkey')
+            keyPassword keystorePropertiesFile.exists()
+                ? keystoreProperties['keyPassword']
+                : (System.getenv("RELEASE_KEY_PASSWORD") ?: 'android')
         }
     }
 
@@ -73,17 +72,13 @@ android {
         }
         release {
             signingConfig signingConfigs.release
-            minifyEnabled false          // Set true only after testing ProGuard rules thoroughly
-            shrinkResources false        // Keep false while minifyEnabled = false
+            minifyEnabled false
+            shrinkResources false
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
-            // Production: no debug symbols in release APK
             debuggable false
-            jniDebuggable false
-            renderscriptDebuggable false
         }
     }
 
-    // ── Split APKs by ABI for Play Store size optimization ─────────────────
     splits {
         abi {
             reset()
@@ -97,7 +92,6 @@ android {
         pickFirst '**/libc++_shared.so'
         pickFirst '**/libfbjni.so'
         pickFirst '**/libonnxruntime.so'
-        // Exclude unnecessary native libraries from the APK
         exclude '**/libjsc.so'
     }
 
@@ -105,13 +99,11 @@ android {
         ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~'
     }
 
-    // ── Lint: fail on errors, warn on warnings ──────────────────────────────
     lint {
         abortOnError false
         checkReleaseBuilds false
     }
 
-    // ── Java / Kotlin compile options ───────────────────────────────────────
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
@@ -123,10 +115,8 @@ android {
 }
 
 dependencies {
-    // React Native
     implementation("com.facebook.react:react-android")
 
-    // Hermes JS engine
     def hermesEnabled = project.properties['hermesEnabled'] ?: 'true'
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")

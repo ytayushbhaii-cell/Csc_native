@@ -17,16 +17,33 @@ workflows:
           echo "sdk.dir=$ANDROID_SDK_ROOT" > \
             $CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android/local.properties
 
+      - name: Verify signing files
+        script: |
+          KEY_PROPS="$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android/key.properties"
+          KEYSTORE="$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android/app/release.keystore"
+          if [ ! -f "$KEY_PROPS" ]; then echo "ERROR: key.properties missing"; exit 1; fi
+          if [ ! -f "$KEYSTORE" ]; then echo "ERROR: release.keystore missing"; exit 1; fi
+          echo "Signing files OK"
+          cat "$KEY_PROPS"
+
       - name: Build Release APK
         script: |
+          export PATH="$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/node_modules/.bin:$PATH"
           cd $CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android
           chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon --stacktrace
+          ./gradlew assembleRelease \
+            --no-daemon \
+            --stacktrace \
+            -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=512m"
 
       - name: Build Release AAB
         script: |
+          export PATH="$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/node_modules/.bin:$PATH"
           cd $CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android
-          ./gradlew bundleRelease --no-daemon --stacktrace
+          ./gradlew bundleRelease \
+            --no-daemon \
+            --stacktrace \
+            -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=512m"
 
     artifacts:
       - Offline-Smart-Toolkit/artifacts/mobile/android/app/build/outputs/apk/release/*.apk
