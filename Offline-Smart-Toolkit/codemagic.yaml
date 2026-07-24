@@ -26,6 +26,7 @@ workflows:
       # ── Android local.properties ─────────────────────────────────────────────
       - name: Set Android SDK path
         script: |
+          test -n "$ANDROID_SDK_ROOT" || { echo "ANDROID_SDK_ROOT is not set"; exit 1; }
           echo "sdk.dir=$ANDROID_SDK_ROOT" > \
             $CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android/local.properties
 
@@ -46,6 +47,7 @@ workflows:
           ./gradlew assembleRelease \
             --no-daemon \
             --stacktrace \
+            -PREACT_NATIVE_VERSION=0.81.5 \
             -PhermesEnabled=true
 
       # ── Build Release AAB (Play Store) ───────────────────────────────────────
@@ -55,6 +57,7 @@ workflows:
           ./gradlew bundleRelease \
             --no-daemon \
             --stacktrace \
+            -PREACT_NATIVE_VERSION=0.81.5 \
             -PhermesEnabled=true
 
     artifacts:
