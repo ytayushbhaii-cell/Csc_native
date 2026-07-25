@@ -163,7 +163,14 @@ export function AppNavigator() {
     <View style={{ flex: 1 }}>
     <Stack.Navigator
       initialRouteName="Dashboard"
-      screenOptions={{ headerShown: false, animation: 'slide_from_right' }}
+      screenOptions={{
+        headerShown: false,
+        // Keep tool navigation calm and intentional instead of making every
+        // screen enter from the side like a basic drawer transition.
+        animation: 'fade',
+        gestureEnabled: true,
+        gestureDirection: 'horizontal',
+      }}
     >
       {/* ── Main screens ─────────────────────────────────────────── */}
       <Stack.Screen name="Dashboard"  component={Dashboard} />
