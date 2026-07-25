@@ -11,7 +11,7 @@ workflows:
     scripts:
       # ── 1. Install pnpm ────────────────────────────────────────────────────
       - name: Install pnpm
-        script: npm install -g pnpm@10.26.1
+        script: npm install -g pnpm@10.26.1 --force
 
       # ── 2. JS dependencies (pnpm workspace) ───────────────────────────────
       # --no-frozen-lockfile: safer on CI — lockfile version drift won't break build
