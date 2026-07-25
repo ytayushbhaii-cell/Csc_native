@@ -3,6 +3,10 @@
  * - Points the CLI at the android/ source directory.
  * - Disables autolinking for all Expo packages: their JS APIs are handled by
  *   Metro shims (shims/*.ts), so native autolinking is not needed or wanted.
+ *
+ * NOTE: Package names with '/' (deep imports like 'expo-file-system/legacy')
+ * are NOT valid autolinking keys and have been excluded to prevent
+ * react-native config parse errors.
  */
 module.exports = {
   project: {
@@ -36,5 +40,7 @@ module.exports = {
     'expo-system-ui':          { platforms: { android: null, ios: null } },
     'expo-web-browser':        { platforms: { android: null, ios: null } },
     '@expo/metro-config':      { platforms: { android: null, ios: null } },
+    // NOTE: 'expo-file-system/legacy' removed — slash in key is invalid for
+    // autolinking and caused react-native config parse warnings.
   },
 };

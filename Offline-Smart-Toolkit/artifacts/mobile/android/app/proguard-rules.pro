@@ -1,6 +1,7 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 #  CSC Smart Toolkit — ProGuard / R8 rules
-#  Phase 8: Production-ready rule set for Play Store release
+#  minifyEnabled=false in release builds, so these rules run only if you
+#  enable minification in the future. Kept comprehensive for safety.
 # ═══════════════════════════════════════════════════════════════════════════════
 
 # ─── React Native core ────────────────────────────────────────────────────────
@@ -45,6 +46,20 @@
 # ─── React Native Image Picker ───────────────────────────────────────────────
 -keep class com.imagepicker.** { *; }
 
+# ─── React Native Image Resizer ──────────────────────────────────────────────
+-keep class com.zoontek.rnimageresizer.** { *; }
+-dontwarn com.zoontek.rnimageresizer.**
+
+# ─── React Native Image Editor ───────────────────────────────────────────────
+-keep class com.reactnativecommunity.imageeditor.** { *; }
+-dontwarn com.reactnativecommunity.imageeditor.**
+
+# ─── React Native PDF Thumbnail ──────────────────────────────────────────────
+-keep class com.reactnativepdfpreview.** { *; }
+-keep class com.reactnativepdfthumbnail.** { *; }
+-dontwarn com.reactnativepdfpreview.**
+-dontwarn com.reactnativepdfthumbnail.**
+
 # ─── React Native FS (filesystem) ────────────────────────────────────────────
 -keep class com.rnfs.** { *; }
 
@@ -78,6 +93,18 @@
 
 # ─── React Native Camera Roll ────────────────────────────────────────────────
 -keep class com.reactnativecommunity.cameraroll.** { *; }
+
+# ─── React Native Blur ───────────────────────────────────────────────────────
+-keep class com.cmcewen.blurview.** { *; }
+-dontwarn com.cmcewen.blurview.**
+
+# ─── React Native QR Code SVG ────────────────────────────────────────────────
+-keep class com.qrcode.** { *; }
+-dontwarn com.qrcode.**
+
+# ─── React Native Slider ─────────────────────────────────────────────────────
+-keep class com.reactnativecommunity.slider.** { *; }
+-dontwarn com.reactnativecommunity.slider.**
 
 # ─── ONNX Runtime ─────────────────────────────────────────────────────────────
 -keep class ai.onnxruntime.** { *; }
@@ -131,16 +158,13 @@
 -dontwarn androidx.**
 
 # ─── General Java / Android ──────────────────────────────────────────────────
-# Keep all enum classes (required for Android XML inflation)
 -keepclassmembers enum * {
     public static **[] values();
     public static ** valueOf(java.lang.String);
 }
-# Keep Parcelable implementations
 -keepclassmembers class * implements android.os.Parcelable {
     public static final android.os.Parcelable$Creator CREATOR;
 }
-# Keep Serializable classes
 -keepclassmembers class * implements java.io.Serializable {
     static final long serialVersionUID;
     private static final java.io.ObjectStreamField[] serialPersistentFields;

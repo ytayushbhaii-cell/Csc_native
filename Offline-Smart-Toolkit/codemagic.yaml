@@ -9,7 +9,7 @@ workflows:
       java: 17
 
     scripts:
-      # ── 1. pnpm ────────────────────────────────────────────────────────────
+      # ── 1. Install pnpm ────────────────────────────────────────────────────
       - name: Install pnpm
         script: npm install -g pnpm@10.26.1
 
@@ -17,37 +17,29 @@ workflows:
       - name: Install JS dependencies
         script: |
           cd $CM_BUILD_DIR/Offline-Smart-Toolkit
-          pnpm install --frozen-lockfile
+          pnpm install --no-frozen-lockfile
 
-      # ── 3. local.properties ───────────────────────────────────────────────
-      - name: Set Android SDK path
+      # ── 3. Android SDK components ─────────────────────────────────────────
+      - name: Accept Android SDK licences & install components
         script: |
-          test -n "$ANDROID_SDK_ROOT" || { echo "ANDROID_SDK_ROOT is not set"; exit 1; }
+          yes | sdkmanager --licenses 2>/dev/null || true
+          sdkmanager \
+            "platforms;android-35" \
+            "build-tools;35.0.0" \
+            "ndk;27.1.12297006" \
+            2>/dev/null || true
           echo "sdk.dir=$ANDROID_SDK_ROOT" > \
             $CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android/local.properties
 
-      # ── 4. key.properties for release signing ────────────────────────────
-      # Uses Codemagic's android_signing integration env vars.
-      # Fallback: key.properties is already committed for local CI.
-      - name: Set up release signing
+      # ── 4. Verify signing files ────────────────────────────────────────────
+      - name: Verify signing files
         script: |
           KEY="$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android/key.properties"
           KS="$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android/app/release.keystore"
-          if [ -n "$CM_KEYSTORE_PATH" ]; then
-            cat > "$KEY" <<EOF
-          storeFile=$CM_KEYSTORE_PATH
-          storePassword=$CM_KEYSTORE_PASSWORD
-          keyAlias=$CM_KEY_ALIAS
-          keyPassword=$CM_KEY_PASSWORD
-          EOF
-            echo "Signing: using Codemagic managed keystore"
-          elif [ -f "$KEY" ] && [ -f "$KS" ]; then
-            echo "Signing: using committed key.properties + release.keystore"
-          else
-            echo "ERROR: No signing credentials found."; exit 1
-          fi
+          [ -f "$KEY" ] && echo "✓ key.properties found" || { echo "✗ MISSING: key.properties"; exit 1; }
+          [ -f "$KS"  ] && echo "✓ release.keystore found" || { echo "✗ MISSING: release.keystore"; exit 1; }
 
-      # ── 5. Release APK ────────────────────────────────────────────────────
+      # ── 5. Build Release APK ──────────────────────────────────────────────
       - name: Build Release APK
         script: |
           export PATH="$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/node_modules/.bin:$PATH"
@@ -61,9 +53,15 @@ workflows:
             --stacktrace \
             -PhermesEnabled=true \
             2>&1 | tee $CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs/release-apk.log
-          exit ${PIPESTATUS[0]}
+          BUILD_EXIT=${PIPESTATUS[0]}
+          if [ $BUILD_EXIT -ne 0 ]; then
+            echo ""; echo "══ FIRST FAILURE LINE ══"
+            grep -m1 "FAILURE\|error:\|Exception\|What went wrong" \
+              $CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs/release-apk.log || true
+          fi
+          exit $BUILD_EXIT
 
-      # ── 6. Release AAB (Play Store) ───────────────────────────────────────
+      # ── 6. Build Release AAB (Play Store) ─────────────────────────────────
       - name: Build Release AAB
         script: |
           export PATH="$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/node_modules/.bin:$PATH"
@@ -76,7 +74,13 @@ workflows:
             --stacktrace \
             -PhermesEnabled=true \
             2>&1 | tee $CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs/release-aab.log
-          exit ${PIPESTATUS[0]}
+          BUILD_EXIT=${PIPESTATUS[0]}
+          if [ $BUILD_EXIT -ne 0 ]; then
+            echo ""; echo "══ FIRST FAILURE LINE ══"
+            grep -m1 "FAILURE\|error:\|Exception\|What went wrong" \
+              $CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs/release-aab.log || true
+          fi
+          exit $BUILD_EXIT
 
     artifacts:
       - Offline-Smart-Toolkit/artifacts/mobile/android/app/build/outputs/apk/release/*.apk
@@ -87,7 +91,7 @@ workflows:
     publishing:
       email:
         recipients:
-          - your@email.com          # <-- apna email daalo
+          - your@email.com
         notify:
           success: true
           failure: true

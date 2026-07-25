@@ -1,1 +1,10 @@
-<resources/>
+<resources>
+  <!-- Night-mode color overrides for CSC Smart Toolkit.
+       The app uses React Native's ThemeContext for dark mode, so Android-level
+       night colors are kept neutral (white backgrounds stay white for the
+       splash screen and icon backgrounds). -->
+  <color name="splashscreen_background">#FFFFFF</color>
+  <color name="iconBackground">#1D4ED8</color>
+  <color name="colorPrimary">#023c69</color>
+  <color name="colorPrimaryDark">#FFFFFF</color>
+</resources>
