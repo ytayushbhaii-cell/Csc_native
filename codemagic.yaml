@@ -105,10 +105,3 @@ workflows:
       - Offline-Smart-Toolkit/artifacts/mobile/android/app/build/outputs/mapping/release/mapping.txt
       - Offline-Smart-Toolkit/build-logs/*.log
 
-    publishing:
-      email:
-        recipients:
-          - $CM_SUBMITTER_EMAIL      # Codemagic automatically sets this to the triggering user's email
-        notify:
-          success: true
-          failure: true
