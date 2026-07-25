@@ -1,23 +1,29 @@
+// Resolve the React Native Gradle plugin path — checked at settings evaluation time
+// so it can be reused in both pluginManagement (for plugins{} blocks) and at the
+// root settings level (for buildscript.classpath resolution in native modules like
+// @react-native-community/slider that still use the old classpath+apply pattern).
+def rnGradlePluginPath = {
+    def local     = file("../node_modules/@react-native/gradle-plugin")
+    def workspace = file("../../../node_modules/@react-native/gradle-plugin")
+    def pnpmStore = file("../../../node_modules/.pnpm/node_modules/@react-native/gradle-plugin")
+    (local.exists() ? local : workspace.exists() ? workspace : pnpmStore).canonicalFile
+}()
+
 pluginManagement {
-    // React Native Gradle plugin lookup — tries multiple locations in priority order:
-    //  1. mobile/node_modules (npm or pnpm hoisted to package level)
-    //  2. workspace root node_modules (pnpm hoisted / shamefully-hoisted)
-    //  3. pnpm virtual-store (legacy fallback, symlinked layout)
-    def localPlugin     = file("../node_modules/@react-native/gradle-plugin")
-    def workspacePlugin = file("../../../node_modules/@react-native/gradle-plugin")
-    def pnpmPlugin      = file("../../../node_modules/.pnpm/node_modules/@react-native/gradle-plugin")
-    def reactNativeGradlePlugin = (
-        localPlugin.exists()     ? localPlugin     :
-        workspacePlugin.exists() ? workspacePlugin :
-                                   pnpmPlugin
-    ).canonicalFile
-    includeBuild(reactNativeGradlePlugin.absolutePath)
+    // Make the plugin available for plugins{} blocks (e.g. id("com.facebook.react.settings"))
+    includeBuild(rnGradlePluginPath.absolutePath)
     repositories {
         google()
         mavenCentral()
         gradlePluginPortal()
     }
 }
+
+// Also include at the settings level (outside pluginManagement) so Gradle exposes
+// com.facebook.react:react-native-gradle-plugin as a composite-build artifact.
+// This satisfies buildscript.classpath lookups in third-party native modules
+// (e.g. slider, reanimated) that haven't migrated to the new plugins{} syntax.
+includeBuild(rnGradlePluginPath.absolutePath)
 
 plugins {
     id("com.facebook.react.settings")
