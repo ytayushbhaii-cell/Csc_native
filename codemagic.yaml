@@ -14,16 +14,12 @@ workflows:
         script: npm install -g pnpm@10.26.1 --force
 
       # ── 2. JS dependencies (pnpm workspace) ───────────────────────────────
-      # --no-frozen-lockfile: safer on CI — lockfile version drift won't break build
       - name: Install JS dependencies
         script: |
           cd $CM_BUILD_DIR/Offline-Smart-Toolkit
           pnpm install --no-frozen-lockfile
 
       # ── 3. Android SDK components ─────────────────────────────────────────
-      # Accept licences and install SDK 35 + build-tools + NDK.
-      # NDK is required by: onnxruntime-react-native, react-native-vision-camera,
-      # react-native-reanimated, react-native-gesture-handler, tfjs-react-native.
       - name: Accept Android SDK licences & install components
         script: |
           yes | sdkmanager --licenses 2>/dev/null || true
@@ -38,22 +34,45 @@ workflows:
           echo "NDK check: $(ls $ANDROID_SDK_ROOT/ndk/ 2>/dev/null | head -3 || echo 'NDK dir not found')"
 
       # ── 4. Release signing ────────────────────────────────────────────────
-      # key.properties and release.keystore are committed in the repo so Codemagic
-      # can build without the Code Signing UI. Committed storeFile=release.keystore
-      # resolves to android/app/release.keystore (relative to app module dir).
       - name: Verify signing files
         script: |
           KEY="$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android/key.properties"
           KS="$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android/app/release.keystore"
           [ -f "$KEY" ] && echo "✓ key.properties found" || { echo "✗ MISSING: key.properties"; exit 1; }
           [ -f "$KS"  ] && echo "✓ release.keystore found" || { echo "✗ MISSING: release.keystore"; exit 1; }
-          # Verify keystore is readable
           keytool -list \
             -keystore "$KS" \
             -storepass "$(grep storePassword $KEY | cut -d= -f2)" \
             -noprompt 2>/dev/null && echo "✓ Keystore valid" || echo "⚠ keytool check skipped"
 
-      # ── 5. Build Release APK ──────────────────────────────────────────────
+      # ── 5. Patch native modules — remove old-style RN Gradle plugin classpath ──
+      # Gradle composite build substitutions do NOT apply to buildscript.classpath
+      # (confirmed in Gradle docs). Old-style native modules that declare
+      # `classpath("com.facebook.react:react-native-gradle-plugin")` in their own
+      # buildscript block will always fail to resolve it from Maven Central, because
+      # in RN 0.71+ the plugin lives in node_modules, not Maven.
+      # Fix: strip that single line from every affected build.gradle before Gradle runs.
+      # The plugin is still found via pluginManagement.includeBuild in settings.gradle,
+      # so `apply plugin: "com.facebook.react"` continues to work correctly.
+      - name: Patch native module build.gradle files (remove old RN plugin classpath)
+        script: |
+          MOBILE="$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile"
+          WORKSPACE="$CM_BUILD_DIR/Offline-Smart-Toolkit"
+          PATCHED=0
+          # Search both hoisted workspace node_modules and mobile-local node_modules
+          for NM_DIR in "$WORKSPACE/node_modules" "$MOBILE/node_modules"; do
+            [ -d "$NM_DIR" ] || continue
+            while IFS= read -r -d '' gradle_file; do
+              if grep -q "com.facebook.react:react-native-gradle-plugin" "$gradle_file"; then
+                sed -i '/com\.facebook\.react:react-native-gradle-plugin/d' "$gradle_file"
+                echo "  Patched: ${gradle_file#$CM_BUILD_DIR/}"
+                PATCHED=$((PATCHED + 1))
+              fi
+            done < <(find "$NM_DIR" -path "*/android/build.gradle" -print0 2>/dev/null)
+          done
+          echo "Total patched: $PATCHED file(s)"
+
+      # ── 6. Build Release APK ──────────────────────────────────────────────
       - name: Build Release APK
         script: |
           # react-native binary needed for autolinkLibrariesFromCommand in settings.gradle.
@@ -73,13 +92,14 @@ workflows:
             2>&1 | tee $CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs/release-apk.log
           BUILD_EXIT=${PIPESTATUS[0]}
           if [ $BUILD_EXIT -ne 0 ]; then
-            echo ""; echo "══ FIRST FAILURE LINE ══"
-            grep -m1 "FAILURE\|error:\|Exception\|What went wrong" \
+            echo ""; echo "══ WHAT WENT WRONG ══"
+            # Print the full "What went wrong" section for a clear error summary
+            awk '/\* What went wrong:/{found=1} found{print; if(/\* Try:/)exit}' \
               $CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs/release-apk.log || true
           fi
           exit $BUILD_EXIT
 
-      # ── 6. Build Release AAB (Play Store) ─────────────────────────────────
+      # ── 7. Build Release AAB (Play Store) ─────────────────────────────────
       - name: Build Release AAB
         script: |
           export PATH="$CM_BUILD_DIR/Offline-Smart-Toolkit/node_modules/.bin:$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/node_modules/.bin:$PATH"
@@ -94,8 +114,8 @@ workflows:
             2>&1 | tee $CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs/release-aab.log
           BUILD_EXIT=${PIPESTATUS[0]}
           if [ $BUILD_EXIT -ne 0 ]; then
-            echo ""; echo "══ FIRST FAILURE LINE ══"
-            grep -m1 "FAILURE\|error:\|Exception\|What went wrong" \
+            echo ""; echo "══ WHAT WENT WRONG ══"
+            awk '/\* What went wrong:/{found=1} found{print; if(/\* Try:/)exit}' \
               $CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs/release-aab.log || true
           fi
           exit $BUILD_EXIT
@@ -105,4 +125,3 @@ workflows:
       - Offline-Smart-Toolkit/artifacts/mobile/android/app/build/outputs/bundle/release/*.aab
       - Offline-Smart-Toolkit/artifacts/mobile/android/app/build/outputs/mapping/release/mapping.txt
       - Offline-Smart-Toolkit/build-logs/*.log
-
