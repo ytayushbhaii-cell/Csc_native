@@ -5,7 +5,7 @@
  */
 import React from 'react';
 import { View } from 'react-native';
-import { createStackNavigator } from '@react-navigation/stack';
+import { createStackNavigator, TransitionPresets } from '@react-navigation/stack';
 import { AppDrawer } from '@/components/AppDrawer';
 
 // ── Main / Tabs ────────────────────────────────────────────────────────────
@@ -164,10 +164,9 @@ export function AppNavigator() {
     <Stack.Navigator
       initialRouteName="Dashboard"
       screenOptions={{
+        ...TransitionPresets.ScaleFromCenterAndroid,
         headerShown: false,
-        // Keep tool navigation calm and intentional instead of making every
-        // screen enter from the side like a basic drawer transition.
-        animation: 'fade',
+        // Open tools with a focused center zoom instead of a side slide.
         gestureEnabled: true,
         gestureDirection: 'horizontal',
       }}
