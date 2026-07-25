@@ -56,8 +56,10 @@ workflows:
       # ── 5. Build Release APK ──────────────────────────────────────────────
       - name: Build Release APK
         script: |
-          # react-native binary needed for autolinkLibrariesFromCommand in settings.gradle
-          export PATH="$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/node_modules/.bin:$PATH"
+          # react-native binary needed for autolinkLibrariesFromCommand in settings.gradle.
+          # pnpm workspace hoists binaries to the workspace root node_modules/.bin,
+          # NOT to mobile/node_modules/.bin — both paths are included for safety.
+          export PATH="$CM_BUILD_DIR/Offline-Smart-Toolkit/node_modules/.bin:$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/node_modules/.bin:$PATH"
           mkdir -p $CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs
           cd $CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android
           chmod +x gradlew
@@ -79,7 +81,7 @@ workflows:
       # ── 6. Build Release AAB (Play Store) ─────────────────────────────────
       - name: Build Release AAB
         script: |
-          export PATH="$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/node_modules/.bin:$PATH"
+          export PATH="$CM_BUILD_DIR/Offline-Smart-Toolkit/node_modules/.bin:$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/node_modules/.bin:$PATH"
           mkdir -p $CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs
           cd $CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android
           ./gradlew bundleRelease \
@@ -106,7 +108,7 @@ workflows:
     publishing:
       email:
         recipients:
-          - your@email.com          # <-- apna email daalo
+          - $CM_SUBMITTER_EMAIL      # Codemagic automatically sets this to the triggering user's email
         notify:
           success: true
           failure: true
