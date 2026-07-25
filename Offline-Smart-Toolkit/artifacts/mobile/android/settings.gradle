@@ -1,17 +1,13 @@
-// Resolve the React Native Gradle plugin path — checked at settings evaluation time
-// so it can be reused in both pluginManagement (for plugins{} blocks) and at the
-// root settings level (for buildscript.classpath resolution in native modules like
-// @react-native-community/slider that still use the old classpath+apply pattern).
-def rnGradlePluginPath = {
+// pluginManagement MUST be the first block in settings.gradle (Gradle rule).
+pluginManagement {
+    // Locate the React Native Gradle plugin — tries mobile/node_modules first,
+    // then workspace root (pnpm hoisted), then pnpm virtual-store as fallback.
     def local     = file("../node_modules/@react-native/gradle-plugin")
     def workspace = file("../../../node_modules/@react-native/gradle-plugin")
     def pnpmStore = file("../../../node_modules/.pnpm/node_modules/@react-native/gradle-plugin")
-    (local.exists() ? local : workspace.exists() ? workspace : pnpmStore).canonicalFile
-}()
-
-pluginManagement {
-    // Make the plugin available for plugins{} blocks (e.g. id("com.facebook.react.settings"))
-    includeBuild(rnGradlePluginPath.absolutePath)
+    def rnPlugin  = (local.exists() ? local : workspace.exists() ? workspace : pnpmStore).canonicalFile
+    // Makes plugin available for plugins{} blocks (e.g. id("com.facebook.react.settings"))
+    includeBuild(rnPlugin.absolutePath)
     repositories {
         google()
         mavenCentral()
@@ -19,15 +15,19 @@ pluginManagement {
     }
 }
 
-// Also include at the settings level (outside pluginManagement) so Gradle exposes
-// com.facebook.react:react-native-gradle-plugin as a composite-build artifact.
-// This satisfies buildscript.classpath lookups in third-party native modules
-// (e.g. slider, reanimated) that haven't migrated to the new plugins{} syntax.
-includeBuild(rnGradlePluginPath.absolutePath)
-
 plugins {
     id("com.facebook.react.settings")
 }
+
+// Root-level includeBuild AFTER plugins{} — Gradle allows this position.
+// This exposes com.facebook.react:react-native-gradle-plugin as a composite-build
+// artifact so sub-project buildscript.classpath lookups (used by old-style native
+// modules like @react-native-community/slider) can resolve it without Maven Central.
+// Gradle deduplicates includeBuild paths, so including the same path twice is safe.
+def local     = file("../node_modules/@react-native/gradle-plugin")
+def workspace = file("../../../node_modules/@react-native/gradle-plugin")
+def pnpmStore = file("../../../node_modules/.pnpm/node_modules/@react-native/gradle-plugin")
+includeBuild((local.exists() ? local : workspace.exists() ? workspace : pnpmStore).canonicalFile.absolutePath)
 
 extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
     ex.autolinkLibrariesFromCommand()
