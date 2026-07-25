@@ -1,9 +1,16 @@
 pluginManagement {
-    // npm installs to mobile/node_modules. In the pnpm workspace, React Native's
-    // Gradle plugin is exposed from the workspace virtual-store node_modules.
-    def localPlugin = file("../node_modules/@react-native/gradle-plugin")
-    def workspacePlugin = file("../../../node_modules/.pnpm/node_modules/@react-native/gradle-plugin")
-    def reactNativeGradlePlugin = (localPlugin.exists() ? localPlugin : workspacePlugin).canonicalFile
+    // React Native Gradle plugin lookup — tries multiple locations in priority order:
+    //  1. mobile/node_modules (npm or pnpm hoisted to package level)
+    //  2. workspace root node_modules (pnpm hoisted / shamefully-hoisted)
+    //  3. pnpm virtual-store (legacy fallback, symlinked layout)
+    def localPlugin     = file("../node_modules/@react-native/gradle-plugin")
+    def workspacePlugin = file("../../../node_modules/@react-native/gradle-plugin")
+    def pnpmPlugin      = file("../../../node_modules/.pnpm/node_modules/@react-native/gradle-plugin")
+    def reactNativeGradlePlugin = (
+        localPlugin.exists()     ? localPlugin     :
+        workspacePlugin.exists() ? workspacePlugin :
+                                   pnpmPlugin
+    ).canonicalFile
     includeBuild(reactNativeGradlePlugin.absolutePath)
     repositories {
         google()

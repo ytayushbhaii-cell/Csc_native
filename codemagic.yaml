@@ -57,9 +57,10 @@ workflows:
       - name: Build Release APK
         script: |
           # react-native binary needed for autolinkLibrariesFromCommand in settings.gradle.
-          # pnpm workspace hoists binaries to the workspace root node_modules/.bin,
-          # NOT to mobile/node_modules/.bin — both paths are included for safety.
+          # With node-linker=hoisted, pnpm puts binaries at workspace root node_modules/.bin.
           export PATH="$CM_BUILD_DIR/Offline-Smart-Toolkit/node_modules/.bin:$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/node_modules/.bin:$PATH"
+          echo "react-native binary: $(which react-native 2>/dev/null || echo 'NOT FOUND')"
+          echo "react-native version: $(react-native --version 2>/dev/null || echo 'N/A')"
           mkdir -p $CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs
           cd $CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android
           chmod +x gradlew
