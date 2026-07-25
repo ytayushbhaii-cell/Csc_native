@@ -5,10 +5,10 @@
  *  1. Mounts → immediately checks if required models are cached.
  *  2. If all required models are cached → renders `null` (gate is open).
  *  3. If any model is missing → renders a download card with:
- *       • Model name, download size, required device storage
+ *       • Download size and required device storage
  *       • Download button
  *       • Real progress: %, MB downloaded / total, speed MB/s, ETA
- *       • "AI Model Installed Successfully" on completion
+ *       • "Offline processing is ready" on completion
  *  4. Parent component is responsible for not rendering the tool UI
  *     while `isReady === false`.
  *
@@ -209,7 +209,6 @@ type GateState =
 
 interface DownloadState {
   progress: DownloadProgress | null;
-  currentModelName: string;
   currentIndex: number;
   totalModels: number;
 }
@@ -220,7 +219,7 @@ export function ModelDownloadGate({ modelIds, optionalModelIds = [], onReady, ac
   const [gateState, setGateState] = useState<GateState>('checking');
   const [error, setError]         = useState<string | null>(null);
   const [dlState, setDlState]     = useState<DownloadState>({
-    progress: null, currentModelName: '', currentIndex: 0, totalModels: 0,
+    progress: null, currentIndex: 0, totalModels: 0,
   });
 
   const abortRef = useRef<AbortController | null>(null);
@@ -298,7 +297,6 @@ export function ModelDownloadGate({ modelIds, optionalModelIds = [], onReady, ac
 
       setDlState({
         progress: null,
-        currentModelName: spec.name + (isOptional ? ' (optional)' : ''),
         currentIndex: downloadedCount,
         totalModels: allIds.length,
       });
@@ -320,18 +318,14 @@ export function ModelDownloadGate({ modelIds, optionalModelIds = [], onReady, ac
         }
         if (isOptional) {
           // Optional model failed (e.g. 404 — file not hosted yet): skip silently.
-          const modelName = spec.name;
           console.warn(`[ModelDownloadGate] Optional model ${modelId} skipped: ${e?.message ?? e}`);
-          // Show a brief non-blocking notice, but don't stop the loop
-          setDlState(prev => ({ ...prev, currentModelName: `${modelName} — skipped (not available)` }));
           continue;
         }
         // Required model failed — keep gate closed and show actionable error.
-        const modelName = spec.name;
         const detail    = e?.message ? `: ${e.message}` : '';
         console.error(`[ModelDownloadGate] Required model ${modelId} failed${detail}`);
         setGateState('needs_download');
-        setError(`Could not download ${modelName}${detail}. Check your connection and try again.`);
+        setError(`Could not download the required files${detail}. Check your connection and try again.`);
         return;
       }
     }
@@ -342,9 +336,8 @@ export function ModelDownloadGate({ modelIds, optionalModelIds = [], onReady, ac
     const verifyChecks = await Promise.all(validRequired.map(id => modelDownloadService.isModelCached(id)));
     const uncachedIds  = validRequired.filter((_, i) => !verifyChecks[i]);
     if (uncachedIds.length > 0) {
-      const uncachedNames = uncachedIds.map(id => MODEL_SPECS[id]?.name ?? id).join(', ');
       setGateState('needs_download');
-      setError(`Model verification failed for: ${uncachedNames}. The download may have been interrupted. Please try again.`);
+      setError('File verification failed. The download may have been interrupted. Please try again.');
       return;
     }
 
@@ -379,7 +372,7 @@ export function ModelDownloadGate({ modelIds, optionalModelIds = [], onReady, ac
         <MaterialCommunityIcons name="check-circle" size={22} color="#22C55E" />
         <View style={styles.successTextBlock}>
           <Text style={[styles.successTitle, { color: '#22C55E', fontFamily: 'Inter_700Bold' }]}>
-            AI Model Installed Successfully
+             Offline Processing Ready
           </Text>
           <Text style={[styles.successSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
             Background removal is now available offline
@@ -442,7 +435,7 @@ export function ModelDownloadGate({ modelIds, optionalModelIds = [], onReady, ac
   }
 
   // ── Render: downloading ───────────────────────────────────────────────────
-  const { progress, currentModelName, currentIndex, totalModels } = dlState;
+  const { progress, currentIndex, totalModels } = dlState;
   const pct = progress?.percentage ?? 0;
 
   return (
@@ -452,10 +445,10 @@ export function ModelDownloadGate({ modelIds, optionalModelIds = [], onReady, ac
         <ActivityIndicator color={accentColor} size="small" />
         <View style={styles.headerText}>
           <Text style={[styles.cardTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-            Downloading AI Model
+            Downloading Offline Processing Files
           </Text>
           <Text style={[styles.cardSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-            {currentModelName}
+            Preparing offline processing
             {totalModels > 1 ? ` (${currentIndex + 1} of ${totalModels})` : ''}
           </Text>
         </View>
@@ -510,11 +503,6 @@ const styles = StyleSheet.create({
   headerText:     { flex: 1 },
   cardTitle:      { fontSize: 15 },
   cardSub:        { fontSize: 12, marginTop: 2 },
-  modelRow:       { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, borderTopWidth: 1 },
-  modelInfo:      { flex: 1 },
-  modelName:      { fontSize: 13 },
-  modelDesc:      { fontSize: 11, marginTop: 1 },
-  modelSize:      { fontSize: 12 },
   storageRow:     { flexDirection: 'row', alignItems: 'center', gap: 6, padding: 8 },
   storageText:    { fontSize: 11, flex: 1 },
   errorText:      { fontSize: 12 },

@@ -36,14 +36,14 @@ export async function runOcr(imageUri: string, _language = 'eng'): Promise<OcrRe
  * These are ready-to-implement integration points.
  */
 export const AI_FEATURES = {
-  autoEdgeDetection:     'MediaPipe Document Detection — ready for integration',
-  autoCrop:              'MediaPipe Selfie Segmentation + Document Crop — ready',
+  autoEdgeDetection:     'Automatic document detection — ready for integration',
+  autoCrop:              'Automatic subject segmentation + document crop — ready',
   perspectiveCorrection: 'OpenCV warpPerspective — ready for WASM integration',
   shadowRemoval:         'Custom CNN / guided filter — see lib/ai/processors/',
   noiseReduction:        'Bilateral filter via WASM OpenCV — ready for integration',
   smartAlignment:        'Hough transform via OpenCV WASM — ready for integration',
   autoCenter:            'Face/document detection centroid — see lib/ai/services/',
   hdExport:              'ESRGAN super-resolution — ONNX model slot available',
-  faceDetection:         'MediaPipe FaceMesh — ready for integration',
-  documentDetection:     'MediaPipe Document Detection — ready for integration',
+  faceDetection:         'Automatic face detection — ready for integration',
+  documentDetection:     'Automatic document detection — ready for integration',
 };

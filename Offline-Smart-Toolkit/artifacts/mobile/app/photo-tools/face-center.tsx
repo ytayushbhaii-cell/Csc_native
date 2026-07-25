@@ -78,7 +78,7 @@ export default function FaceCenterScreen() {
       tick('detect', 'error');
       setError(
         e?.message?.includes('fetch') || e?.message?.includes('network')
-          ? 'Could not load AI model — needs internet once to cache model weights.'
+           ? 'Could not load offline processing files — connect once to prepare this tool.'
           : `Processing failed: ${e?.message ?? 'unknown error'}`
       );
     } finally {

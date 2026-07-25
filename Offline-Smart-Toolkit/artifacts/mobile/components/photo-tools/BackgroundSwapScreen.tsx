@@ -6,8 +6,7 @@
  *  • Custom background color — hex color input when "Custom" preset is selected
  *  • Processing time display — real elapsed time shown during & after processing
  *  • Export step — dedicated "Exporting…" progress step
- *  • Updated AI pipeline banner — accurately describes the full pipeline:
- *    BiRefNet + PyMatting Guided Filter + BEN2 refinement + Alpha Matte
+ *  • Updated offline processing banner
  *
  * Previous v4 features preserved unchanged:
  *  • ModelDownloadGate — download gate with %, speed, ETA, retry
@@ -64,20 +63,20 @@ interface BackgroundSwapScreenProps {
 
 const STANDARD_STEPS = [
   { id: 'decode',  label: 'Loading image at original resolution…' },
-  { id: 'analyze', label: 'Analyzing subject & routing AI model…' },
-  { id: 'detect',  label: 'Detecting Subject (BiRefNet AI)…' },
-  { id: 'ben2',    label: 'BEN2 Hair & Edge Refinement…' },
-  { id: 'refine',  label: 'PyMatting Alpha Matte Refinement…' },
+  { id: 'analyze', label: 'Analyzing subject for local processing…' },
+  { id: 'detect',  label: 'Detecting subject…' },
+  { id: 'ben2',    label: 'Refining hair & edges…' },
+  { id: 'refine',  label: 'Refining the alpha matte…' },
   { id: 'edges',   label: 'Edge Smoothing & Halo Removal…' },
   { id: 'encode',  label: 'Generating Transparent PNG…' },
 ];
 
 const HD_STEPS = [
   { id: 'decode',  label: 'Loading image at original resolution…' },
-  { id: 'analyze', label: 'Analyzing subject & selecting HD pipeline…' },
-  { id: 'detect',  label: 'Running BiRefNet HD (1024×1024)…' },
-  { id: 'ben2',    label: 'BEN2 Sub-pixel Hair Refinement…' },
-  { id: 'refine',  label: 'PyMatting Quad-pass Guided Filter…' },
+  { id: 'analyze', label: 'Analyzing subject for HD processing…' },
+  { id: 'detect',  label: 'Detecting subject in HD…' },
+  { id: 'ben2',    label: 'Refining hair & edges at high detail…' },
+  { id: 'refine',  label: 'Applying multi-pass edge refinement…' },
   { id: 'edges',   label: 'Alpha Matte + Halo Removal (HD)…' },
   { id: 'encode',  label: 'Generating HD Transparent PNG…' },
 ];
@@ -240,8 +239,7 @@ export function BackgroundSwapScreen({
       for (const s of stepDefs) tick(s.id, 'done');
       setProgress(100);
 
-      const modelName = out.modelName ?? 'ONNX';
-      setResult({ ...out, modelName });
+      setResult({ ...out, modelName: out.modelName ?? '' });
       const fileName = guessFileName(toolId, 'png');
       recordToolUsage(toolId).catch(() => {});
       addRecentFile({ toolId, toolName: title, fileName, resultUri: out.uri }).catch(() => {});
@@ -316,7 +314,7 @@ export function BackgroundSwapScreen({
           <View style={[styles.infoBanner, { backgroundColor: color + '0D', borderColor: color + '30', borderRadius: colors.radius }]}>
             <MaterialCommunityIcons name="robot-outline" size={16} color={color} />
             <Text style={[styles.infoBannerText, { color: colors.foreground, fontFamily: 'Inter_400Regular' }]}>
-              BiRefNet → PyMatting Guided Filter → BEN2 Refinement → Alpha Matte · 100% offline
+               Professional subject separation · soft-edge refinement · 100% offline
             </Text>
           </View>
           <AIModelBadge service="segmentation" showUpgradeHint />
@@ -402,8 +400,8 @@ export function BackgroundSwapScreen({
               <Text style={[styles.sectionLabel, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>Quality Mode</Text>
               <View style={styles.qualityRow}>
                 {([
-                  { id: 'standard' as QualityMode, label: 'Standard', icon: 'lightning-bolt', desc: 'Fast · BiRefNet + PyMatting' },
-                  { id: 'hd'       as QualityMode, label: 'HD',        icon: 'shimmer',        desc: 'Slower · + BEN2 Hair Refinement' },
+                  { id: 'standard' as QualityMode, label: 'Standard', icon: 'lightning-bolt', desc: 'Fast · balanced edge detail' },
+                  { id: 'hd'       as QualityMode, label: 'HD',        icon: 'shimmer',        desc: 'Slower · extra hair refinement' },
                 ] as const).map((q) => {
                   const active = quality === q.id;
                   return (
@@ -491,7 +489,7 @@ export function BackgroundSwapScreen({
               <View style={[styles.modelBadge, { backgroundColor: color + '12', borderColor: color + '30', borderRadius: colors.radius - 4 }]}>
                 <MaterialCommunityIcons name="brain" size={13} color={color} />
                 <Text style={[styles.modelBadgeText, { color: color, fontFamily: 'Inter_600SemiBold' }]}>
-                  {result.modelName}
+                  Processed offline
                 </Text>
                 {quality === 'hd' && (
                   <>

@@ -118,7 +118,7 @@ export default function PassportPhotoScreen() {
       tick('segment', 'error');
       setError(
         e?.message?.includes('fetch') || e?.message?.includes('network')
-          ? 'Could not load AI model. Connect to internet once to cache model weights (~4 MB), then use offline forever.'
+           ? 'Could not load offline processing files. Connect once to prepare this tool, then use it offline.'
           : `Processing failed: ${e?.message ?? 'unknown error'}`
       );
     } finally {

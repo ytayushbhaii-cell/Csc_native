@@ -69,7 +69,7 @@ export default function BlurBackgroundScreen() {
       tick('segment', 'error');
       setError(
         e?.message?.includes('fetch') || e?.message?.includes('network')
-          ? 'Could not load AI model. Connect once to cache model weights, then use offline forever.'
+           ? 'Could not load offline processing files. Connect once to prepare this tool, then use it offline.'
           : `Processing failed: ${e?.message ?? 'unknown error'}`
       );
     } finally { setProcessing(false); }

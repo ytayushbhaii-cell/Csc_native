@@ -1,19 +1,16 @@
 /**
- * AI Model Badge — shows which AI backend is active for a tool.
- * Green = dedicated AI model loaded. Amber = CPU fallback (offline-always).
- * Upgrade-ready: badge turns green automatically when a model bundle is dropped in.
+ * Offline processing badge for tools that use on-device intelligence.
  */
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
-import { modelRegistry } from '@/lib/ai/ModelRegistry';
 
 type ServiceType = 'segmentation' | 'face' | 'enhancement';
 
 interface Props {
   service: ServiceType;
-  /** Override the label (if not provided, uses registry label) */
+  /** Override the label when a tool needs a more specific generic label. */
   label?: string;
   /** Show an expanded info card */
   showUpgradeHint?: boolean;
@@ -23,20 +20,8 @@ export function AIModelBadge({ service, label, showUpgradeHint = false }: Props)
   const colors = useColors();
   const [expanded, setExpanded] = React.useState(false);
 
-  const activeLabel = label ?? (
-    service === 'segmentation' ? modelRegistry.activeSegmentationLabel() :
-    service === 'face'         ? modelRegistry.activeFaceLabel() :
-                                 modelRegistry.activeEnhancementLabel()
-  );
-
-  const isAI = !activeLabel.includes('CPU');
-  const dotColor = isAI ? '#22C55E' : '#F59E0B';
-
-  const upgradeLabels: Record<ServiceType, string> = {
-    segmentation: 'U2Net · BiRefNet · IS-Net',
-    face:         'MediaPipe Face Mesh · RetinaFace',
-    enhancement:  'Real-ESRGAN · GFPGAN · CodeFormer',
-  };
+  const activeLabel = label ?? 'Offline AI';
+  const dotColor = '#22C55E';
 
   return (
     <View>
@@ -57,14 +42,10 @@ export function AIModelBadge({ service, label, showUpgradeHint = false }: Props)
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: 8 }]}>
           <Text style={[styles.cardTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>AI Upgrade Path</Text>
           <Text style={[styles.cardBody, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-            This tool runs fully offline with BodyPix on-device. For even higher quality, the following dedicated AI
-            models are architecture-ready and activate automatically once their bundles are installed:
-          </Text>
-          <Text style={[styles.cardModels, { color: colors.foreground, fontFamily: 'Inter_600SemiBold' }]}>
-            {upgradeLabels[service]}
+            This tool runs fully offline on your device. Processing stays local and no photos are uploaded.
           </Text>
           <Text style={[styles.cardBody, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-            No code changes needed — drop the .ort / .tflite bundle into assets.
+            Processing continues to work offline after setup.
           </Text>
         </View>
       )}
@@ -83,5 +64,4 @@ const styles = StyleSheet.create({
   card: { borderWidth: 1, padding: 12, gap: 6, marginTop: 4 },
   cardTitle: { fontSize: 13 },
   cardBody: { fontSize: 11, lineHeight: 17 },
-  cardModels: { fontSize: 12 },
 });

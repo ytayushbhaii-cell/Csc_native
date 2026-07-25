@@ -68,7 +68,7 @@ export default function BackgroundChangerScreen() {
     } catch (e: any) {
       tick('segment', 'error');
       setError(e?.message?.includes('fetch') || e?.message?.includes('network')
-        ? 'Could not load AI model — needs internet once to cache model weights.'
+        ? 'Could not load offline processing files — connect once to prepare this tool.'
         : `Processing failed: ${e?.message ?? 'unknown error'}`);
     } finally { setProcessing(false); }
   };

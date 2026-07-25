@@ -57,8 +57,8 @@ export async function cropToPassportSize(
 
 /**
  * Heuristic validation for passport photo requirements.
- * True AI validation (face detection, background check) requires MediaPipe
- * which is in the AI-ready architecture layer.
+ * Advanced validation (face detection, background check) is kept in the
+ * AI-ready architecture layer.
  */
 export function validatePassportPhoto(
   width: number,
@@ -82,8 +82,8 @@ export function validatePassportPhoto(
     { label: 'Aspect ratio', ok: aspectOk, note: aspectOk ? `${targetAspect.toFixed(2)}:1 ✓` : `Expected ${spec.widthMm}×${spec.heightMm}mm` },
     { label: 'Resolution', ok: resolutionOk, note: resolutionOk ? `${width}×${height}px ✓` : 'Minimum 300px required' },
     { label: 'Square format', ok: squareOk, note: squareOk ? 'Format OK ✓' : 'Image must be square for this spec' },
-    { label: 'Background check', ok: false, note: 'Requires AI (MediaPipe) — architecture ready' },
-    { label: 'Face detection', ok: false, note: 'Requires AI (MediaPipe) — architecture ready' },
+    { label: 'Background check', ok: false, note: 'Advanced check — available in a future update' },
+    { label: 'Face detection', ok: false, note: 'Advanced check — available in a future update' },
   ];
 
   return {

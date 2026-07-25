@@ -85,7 +85,7 @@ export default function FaceRestoreScreen() {
       <View style={[styles.aiBanner, { backgroundColor: COLOR + '0D', borderColor: COLOR + '30', borderRadius: colors.radius }]}>
         <MaterialCommunityIcons name="robot-outline" size={15} color={COLOR} />
         <Text style={[styles.aiText, { color: colors.foreground, fontFamily: 'Inter_400Regular' }]}>
-          GFPGAN · CodeFormer · RestoreFormer ready — AI activates when model bundles are installed
+           Offline face enhancement is ready when processing starts
         </Text>
       </View>
       <AIModelBadge service="enhancement" showUpgradeHint />
