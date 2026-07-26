@@ -219,6 +219,12 @@ export function removeWhiteHalo(
       const mixG = srcPixels[o + 1];
       const mixB = srcPixels[o + 2];
 
+      // Skip color extraction for very low alpha pixels (< 0.15).
+      // At low alpha, fg = (mix − (1−a)·bg) / a amplifies by 1/a → >6.7×.
+      // Even small background estimation errors become large color artifacts.
+      // These pixels are nearly transparent anyway — no visible quality loss.
+      if (a < 0.15) continue;
+
       // Local background sample (more accurate than global for complex backgrounds)
       const bgSample = sampleBackgroundColor(srcPixels, alpha, w, h, x, y, searchR);
       const bgR = bgSample ? bgSample[0] : gBgR;

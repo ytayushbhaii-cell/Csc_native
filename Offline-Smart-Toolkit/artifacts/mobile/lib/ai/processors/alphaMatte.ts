@@ -156,10 +156,21 @@ export function fillSubjectHoles(
   h: number,
   r?: number,
 ): Float32Array {
-  const radius = r ?? Math.max(3, Math.round(Math.min(w, h) * 0.01));
-  // Morphological closing = dilate then erode
-  const dilated = dilate(alpha, w, h, radius);
-  return erode(dilated, w, h, radius);
+  // Larger radius (4% of image) to fill big gaps in clothing/complex subjects.
+  // Previous 1% was too small — jacket-sized holes were not being closed.
+  const radius = r ?? Math.max(12, Math.round(Math.min(w, h) * 0.04));
+  // Triple-pass closing: each pass fills progressively larger holes.
+  // Pass 1: small gaps (fingers, hair joins)
+  // Pass 2: medium gaps (sleeve edges, thin clothing patches)
+  // Pass 3: large interior holes (jacket regions misclassified by model)
+  const r1 = Math.max(4, Math.round(radius * 0.25));
+  const r2 = Math.max(8, Math.round(radius * 0.55));
+  const r3 = radius;
+  let a = alpha;
+  a = erode(dilate(a, w, h, r1), w, h, r1);
+  a = erode(dilate(a, w, h, r2), w, h, r2);
+  a = erode(dilate(a, w, h, r3), w, h, r3);
+  return a;
 }
 
 // ─── Stage 4: Hair-specific refinement pass ───────────────────────────────────
@@ -314,9 +325,13 @@ export function compositeWithSoftAlpha(
   out.set(pixels);
 
   if (bgColor === null) {
-    // Transparent: full-spectrum halo removal (handles any background color)
-    // searchR=24, strength=0.92 for thorough color spill removal
-    removeWhiteHalo(pixels, out, alpha, width, height, 24, 0.92);
+    // Transparent: full-spectrum halo removal (handles any background color).
+    // searchR=10 (was 24): smaller radius avoids sampling wrong colors in complex
+    //   natural backgrounds (grass, buildings). At r=24, pixels 24px away can be
+    //   completely unrelated to the actual edge → rainbow artifacts.
+    // strength=0.72 (was 0.92): lower to avoid color amplification on low-alpha
+    //   pixels near outdoor/complex backgrounds.
+    removeWhiteHalo(pixels, out, alpha, width, height, 10, 0.72);
 
     // Remove isolated background speckles before embedding alpha
     let finalAlpha = removeSpeckles(alpha, width, height, 0.08);

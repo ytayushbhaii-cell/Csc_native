@@ -346,8 +346,13 @@ export async function segmentSubject(uri: string, signal?: AbortSignal): Promise
     ]);
     checkAbort(signal);
 
-    const birefnetAvailable = modelRegistry.get('birefnet')?.status === 'ai-cached' ||
-      modelRegistry.get('birefnet')?.status === 'ai-loading';
+    // Optimistic availability: assume BiRefNet is available unless it has been
+    // explicitly tried and failed ('ai-unavailable'). On first run the registry
+    // status is undefined — treating that as "unavailable" was the bug: it caused
+    // the router to pick RMBG-2.0 first, which 404s, then falls back to the tiny
+    // U2Net (320px) instead of ever trying the 43 MB BiRefNet at public URL.
+    const birefnetStatus = modelRegistry.get('birefnet')?.status;
+    const birefnetAvailable = birefnetStatus !== 'ai-unavailable';
     const decision = routeImage(analysis, capability, ben2Ready, birefnetAvailable);
 
     const result = await onnxAlpha(decoded, analysis, decision, signal);
