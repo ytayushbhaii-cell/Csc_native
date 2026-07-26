@@ -32,6 +32,10 @@ import { ProcessingSteps, makeSteps, updateStep } from './ProcessingSteps';
 import { AIModelBadge } from './AIModelBadge';
 import { ModelDownloadGate } from './ModelDownloadGate';
 import {
+  modelDownloadService,
+} from '@/lib/ai/services/ModelDownloadService';
+import type { DownloadProgress } from '@/lib/ai/services/ModelDownloadService';
+import {
   removeBackground,
   type QualityMode,
   type SegmentationStepCallback,
@@ -142,6 +146,14 @@ export function BackgroundSwapScreen({
   // Gate starts closed on all platforms — ModelDownloadGate checks cache and
   // prompts download if needed (both web and native use ONNX now).
   const [modelsReady, setModelsReady] = useState(false);
+
+  // ── BEN2 upgrade state — separate from gate (BEN2 is optional) ────────────
+  const [ben2Cached, setBen2Cached]     = useState<boolean | null>(null); // null = checking
+  const [ben2Downloading, setBen2Dl]    = useState(false);
+  const [ben2Progress, setBen2Progress] = useState<DownloadProgress | null>(null);
+  const [ben2Error, setBen2Error]       = useState<string | null>(null);
+  const ben2AbortRef = useRef<AbortController | null>(null);
+
   const [image, setImage]   = useState<PickedImage | null>(null);
   const [preset, setPreset] = useState<BackgroundPreset>(defaultPreset);
   const [customHex, setCustomHex] = useState('#FFFFFF');
@@ -162,6 +174,48 @@ export function BackgroundSwapScreen({
   const startTimeRef = useRef<number>(0);
   const elapsedRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [elapsedDisplay, setElapsedDisplay] = useState('');
+
+  // ── BEN2 cache check — runs once models are ready ─────────────────────────
+  useEffect(() => {
+    if (!modelsReady) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const cached = await modelDownloadService.isModelCached('ben2');
+        if (!cancelled) setBen2Cached(cached);
+      } catch { if (!cancelled) setBen2Cached(false); }
+    })();
+    return () => { cancelled = true; };
+  }, [modelsReady]);
+
+  // ── BEN2 download handler ──────────────────────────────────────────────────
+  const handleBen2Download = useCallback(async () => {
+    setBen2Dl(true);
+    setBen2Error(null);
+    setBen2Progress(null);
+    ben2AbortRef.current = new AbortController();
+    const signal = ben2AbortRef.current.signal;
+    const BEN2_URL =
+      (process.env as any).CSC_BEN2_MODEL_URL?.trim() ||
+      (Platform.OS === 'web'
+        ? 'https://huggingface.co/PramaLLC/BEN2/resolve/main/BEN2_Base_hf.onnx'
+        : 'https://huggingface.co/PramaLLC/BEN2/resolve/main/BEN2_Base_hf.onnx');
+    try {
+      await modelDownloadService.downloadModel(
+        'ben2',
+        BEN2_URL,
+        180 * 1024 * 1024,
+        (p) => { if (!signal.aborted) setBen2Progress(p); },
+        signal,
+      );
+      if (!signal.aborted) setBen2Cached(true);
+    } catch (e: any) {
+      if (signal.aborted) { setBen2Dl(false); return; }
+      setBen2Error(e?.message ? `Download failed: ${e.message}` : 'Download failed. Check connection.');
+    } finally {
+      if (!signal.aborted) setBen2Dl(false);
+    }
+  }, []);
 
   // ── Tick elapsed timer during processing ──────────────────────────────────
   useEffect(() => {
@@ -318,6 +372,92 @@ export function BackgroundSwapScreen({
             </Text>
           </View>
           <AIModelBadge service="segmentation" showUpgradeHint />
+
+          {/* ── BEN2 Hair Quality Upgrade Card ───────────────────────────────
+               Shown when BEN2 is not yet downloaded. Disappears once ready. */}
+          {ben2Cached === false && !ben2Downloading && (
+            <View style={[styles.upgradeCard, { backgroundColor: colors.card, borderColor: '#22C55E40', borderRadius: colors.radius }]}>
+              <View style={styles.upgradeHeader}>
+                <View style={[styles.upgradeBadge, { backgroundColor: '#22C55E20' }]}>
+                  <MaterialCommunityIcons name="star-shooting-outline" size={14} color="#22C55E" />
+                  <Text style={[styles.upgradeBadgeText, { color: '#22C55E', fontFamily: 'Inter_700Bold' }]}>
+                    Quality Upgrade
+                  </Text>
+                </View>
+                <Text style={[styles.upgradeSize, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+                  ~180 MB
+                </Text>
+              </View>
+              <Text style={[styles.upgradeTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
+                BEN2 — Better Hair Edges
+              </Text>
+              <Text style={[styles.upgradeDesc, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+                Download once to get cleaner results on curly hair, flyaways & fur. Runs fully offline after download.
+              </Text>
+              {ben2Error && (
+                <Text style={[styles.upgradeError, { color: '#EF4444', fontFamily: 'Inter_400Regular' }]}>
+                  {ben2Error}
+                </Text>
+              )}
+              <TouchableOpacity
+                style={[styles.upgradeBtn, { backgroundColor: '#22C55E', borderRadius: colors.radius - 2 }]}
+                onPress={handleBen2Download}
+                activeOpacity={0.85}
+              >
+                <MaterialCommunityIcons name="download-outline" size={16} color="#fff" />
+                <Text style={[styles.upgradeBtnText, { fontFamily: 'Inter_700Bold' }]}>
+                  Download BEN2
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* BEN2 downloading progress */}
+          {ben2Downloading && (
+            <View style={[styles.upgradeCard, { backgroundColor: colors.card, borderColor: '#22C55E40', borderRadius: colors.radius }]}>
+              <View style={styles.upgradeHeader}>
+                <ActivityIndicator size="small" color="#22C55E" />
+                <Text style={[styles.upgradeTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', flex: 1 }]}>
+                  Downloading BEN2…
+                </Text>
+                <TouchableOpacity onPress={() => ben2AbortRef.current?.abort()}>
+                  <Text style={[{ color: colors.mutedForeground, fontSize: 12, fontFamily: 'Inter_500Medium' }]}>
+                    Cancel
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              {ben2Progress && (
+                <>
+                  <View style={[styles.ben2Track, { backgroundColor: colors.border }]}>
+                    <View style={[styles.ben2Fill, { width: `${ben2Progress.percentage}%` as any, backgroundColor: '#22C55E' }]} />
+                  </View>
+                  <View style={styles.ben2Stats}>
+                    <Text style={[{ color: '#22C55E', fontSize: 18, fontFamily: 'Inter_700Bold' }]}>
+                      {Math.round(ben2Progress.percentage)}%
+                    </Text>
+                    <Text style={[{ color: colors.mutedForeground, fontSize: 11, fontFamily: 'Inter_400Regular' }]}>
+                      {(ben2Progress.bytesDownloaded / 1024 / 1024).toFixed(1)} / {(ben2Progress.totalBytes / 1024 / 1024).toFixed(0)} MB
+                    </Text>
+                    {ben2Progress.speedMBps > 0.01 && (
+                      <Text style={[{ color: colors.mutedForeground, fontSize: 11, fontFamily: 'Inter_400Regular', marginLeft: 'auto' as any }]}>
+                        {ben2Progress.speedMBps.toFixed(1)} MB/s
+                      </Text>
+                    )}
+                  </View>
+                </>
+              )}
+            </View>
+          )}
+
+          {/* BEN2 ready confirmation */}
+          {ben2Cached === true && (
+            <View style={[styles.ben2Ready, { backgroundColor: '#22C55E10', borderColor: '#22C55E30', borderRadius: colors.radius }]}>
+              <MaterialCommunityIcons name="check-circle" size={15} color="#22C55E" />
+              <Text style={[{ color: '#22C55E', fontSize: 12, fontFamily: 'Inter_500Medium' }]}>
+                BEN2 active — hair & edge quality enhanced
+              </Text>
+            </View>
+          )}
 
           {error && <StatusBanner type="error" message={error} />}
 
