@@ -3,10 +3,10 @@ import {
   View, Text, TouchableOpacity, StyleSheet,
   ScrollView, Platform,
 } from 'react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useRouter, useFocusEffect } from '@/lib/native/router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { StatusBar } from 'expo-status-bar';
+import { MaterialCommunityIcons } from '@/lib/native/icons';
+import { StatusBar } from '@/lib/native/status-bar';
 import { useColors } from '@/hooks/useColors';
 import { useTheme } from '@/context/ThemeContext';
 import {

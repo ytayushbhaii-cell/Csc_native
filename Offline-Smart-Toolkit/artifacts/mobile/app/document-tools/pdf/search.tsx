@@ -3,8 +3,8 @@ import {
   View, Text, TouchableOpacity, StyleSheet, ActivityIndicator,
   TextInput, ScrollView, Platform,
 } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import * as Clipboard from 'expo-clipboard';
+import { MaterialCommunityIcons } from '@/lib/native/icons';
+import * as Clipboard from '@/lib/native/clipboard';
 import { useColors } from '@/hooks/useColors';
 import { ToolScreenLayout } from '@/components/photo-tools/ToolScreenLayout';
 import { StatusBanner } from '@/components/photo-tools/StatusBanner';

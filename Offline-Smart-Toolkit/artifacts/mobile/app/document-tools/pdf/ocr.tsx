@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView, Platform, Alert } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import * as Clipboard from 'expo-clipboard';
+import { MaterialCommunityIcons } from '@/lib/native/icons';
+import * as Clipboard from '@/lib/native/clipboard';
 import { useColors } from '@/hooks/useColors';
 import { useTheme } from '@/context/ThemeContext';
 import { ToolScreenLayout } from '@/components/photo-tools/ToolScreenLayout';
@@ -161,7 +161,7 @@ export default function OcrScreen() {
                   document.body.removeChild(a);
                   setTimeout(() => URL.revokeObjectURL(url), 5000);
                 } else {
-                  const FileSystem = await import('expo-file-system');
+                  const FileSystem = await import('@/lib/native/file-system');
                   const dir = (FileSystem as any).cacheDirectory ?? (FileSystem as any).documentDirectory;
                   const fileUri = `${dir}${fileName}`;
                   await (FileSystem as any).writeAsStringAsync(fileUri, text, { encoding: 'utf8' as any });

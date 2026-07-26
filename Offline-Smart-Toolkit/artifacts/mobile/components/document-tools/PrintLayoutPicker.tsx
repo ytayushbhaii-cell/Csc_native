@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Switch } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@/lib/native/icons';
 import { useColors } from '@/hooks/useColors';
 import type { PaperSize, PrintLayout } from '@/lib/features/documents/types';
 import { PAPER_SIZES_MM } from '@/lib/features/documents/types';

@@ -8,7 +8,7 @@ import { DrawerProvider } from '@/context/DrawerContext';
 import { AppProvider } from '@/context/AppContext';
 import { AppNavigator } from '@/navigation/AppNavigator';
 // The navigationRef enables imperative navigation from outside React components
-import { navigationRef } from '@/shims/expo-router';
+import { navigationRef } from '@/lib/native/router';
 import { initPhase6History } from '@/lib/phase6/Phase6History';
 
 void initPhase6History();

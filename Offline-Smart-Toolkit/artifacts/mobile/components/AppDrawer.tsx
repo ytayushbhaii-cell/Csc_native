@@ -8,8 +8,8 @@ import {
   Pressable,
   Platform,
 } from 'react-native';
-import { useRouter, usePathname } from 'expo-router';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useRouter, usePathname } from '@/lib/native/router';
+import { MaterialCommunityIcons } from '@/lib/native/icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { DRAWER_WIDTH, useDrawer } from '@/context/DrawerContext';

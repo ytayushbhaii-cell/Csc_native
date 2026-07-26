@@ -2,7 +2,7 @@
 // Handles merge, split, rotate, delete/extract pages, password, and info.
 import { PDFDocument, degrees, StandardFonts } from 'pdf-lib';
 import { Platform } from 'react-native';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from '@/lib/native/file-system';
 import { writePdfBytes } from '../printUtils';
 import type { PdfInfo } from '../types';
 

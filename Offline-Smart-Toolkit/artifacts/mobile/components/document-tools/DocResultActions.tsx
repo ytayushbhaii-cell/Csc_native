@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Platform } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@/lib/native/icons';
 import { useColors } from '@/hooks/useColors';
 import { exportFile } from '@/lib/photoTools/exportUtils';
 

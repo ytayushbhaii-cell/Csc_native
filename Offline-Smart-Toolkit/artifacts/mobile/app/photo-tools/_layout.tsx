@@ -1,4 +1,4 @@
-import { Stack } from 'expo-router';
+import { Stack } from '@/lib/native/router';
 import React, { useEffect } from 'react';
 import { initPhotoToolsDb } from '@/lib/photoTools/db';
 import { warmUpSegmentationModel } from '@/lib/photoTools/segmentation';

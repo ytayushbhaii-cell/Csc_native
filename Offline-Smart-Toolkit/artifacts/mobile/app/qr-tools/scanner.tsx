@@ -3,11 +3,11 @@ import {
   View, Text, TouchableOpacity, StyleSheet, Platform, ScrollView,
   Alert, FlatList,
 } from 'react-native';
-import * as ExpoClipboard from 'expo-clipboard';
-import { useRouter } from 'expo-router';
+import * as ExpoClipboard from '@/lib/native/clipboard';
+import { useRouter } from '@/lib/native/router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { StatusBar } from 'expo-status-bar';
+import { MaterialCommunityIcons } from '@/lib/native/icons';
+import { StatusBar } from '@/lib/native/status-bar';
 import { useColors } from '@/hooks/useColors';
 import { useTheme } from '@/context/ThemeContext';
 import { parseScannedQR } from '@/lib/features/qr/qrService';
@@ -19,7 +19,7 @@ const QR_COLOR = '#8B5CF6';
 let CameraView: any = null;
 let useCameraPermissions: any = null;
 try {
-  const cam = require('expo-camera');
+  const cam = require('@/lib/native/camera');
   CameraView = cam.CameraView;
   useCameraPermissions = cam.useCameraPermissions;
 } catch {}

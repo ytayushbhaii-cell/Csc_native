@@ -3,12 +3,12 @@ import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView,
   Platform, Alert, ActivityIndicator, Dimensions,
 } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
-import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
+import * as ImagePicker from '@/lib/native/image-picker';
+import { Image } from '@/lib/native/image';
+import { useRouter } from '@/lib/native/router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { StatusBar } from 'expo-status-bar';
+import { MaterialCommunityIcons } from '@/lib/native/icons';
+import { StatusBar } from '@/lib/native/status-bar';
 import Slider from '@react-native-community/slider';
 import { useColors } from '@/hooks/useColors';
 import { useTheme } from '@/context/ThemeContext';

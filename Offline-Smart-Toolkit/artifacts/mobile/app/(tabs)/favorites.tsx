@@ -8,10 +8,10 @@ import {
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { StatusBar } from 'expo-status-bar';
-import { useRouter } from 'expo-router';
+import { MaterialCommunityIcons } from '@/lib/native/icons';
+import { LinearGradient } from '@/lib/native/linear-gradient';
+import { StatusBar } from '@/lib/native/status-bar';
+import { useRouter } from '@/lib/native/router';
 import { useColors } from '@/hooks/useColors';
 import { useDrawer } from '@/context/DrawerContext';
 import { useApp, type Tool } from '@/context/AppContext';

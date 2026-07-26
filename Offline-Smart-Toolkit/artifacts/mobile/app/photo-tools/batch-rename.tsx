@@ -3,14 +3,14 @@ import {
   View, Text, TouchableOpacity, StyleSheet, ActivityIndicator,
   TextInput, Switch, FlatList, Alert,
 } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@/lib/native/icons';
 import { useColors } from '@/hooks/useColors';
 import { ToolScreenLayout } from '@/components/photo-tools/ToolScreenLayout';
 import { StatusBanner } from '@/components/photo-tools/StatusBanner';
 import { batchRenameAndZip } from '@/lib/photoTools/fileUtils';
 import { recordToolUsage } from '@/lib/photoTools/db';
 import { exportFile } from '@/lib/photoTools/exportUtils';
-import * as ImagePicker from 'expo-image-picker';
+import * as ImagePicker from '@/lib/native/image-picker';
 
 const COLOR = '#F59E0B';
 

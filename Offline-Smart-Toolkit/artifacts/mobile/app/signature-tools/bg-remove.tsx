@@ -9,13 +9,13 @@ import {
   View, Text, TouchableOpacity, StyleSheet, Platform, ScrollView,
   Alert, Image, ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter } from '@/lib/native/router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { StatusBar } from 'expo-status-bar';
+import { MaterialCommunityIcons } from '@/lib/native/icons';
+import { StatusBar } from '@/lib/native/status-bar';
 import ViewShot from 'react-native-view-shot';
-import * as ImagePicker from 'expo-image-picker';
-import * as FSLegacy from 'expo-file-system/legacy';
+import * as ImagePicker from '@/lib/native/image-picker';
+import * as FSLegacy from '@/lib/native/file-system-legacy';
 import { useColors } from '@/hooks/useColors';
 import { useTheme } from '@/context/ThemeContext';
 import { useApp } from '@/context/AppContext';
@@ -59,7 +59,7 @@ async function removeBgWeb(imageUri: string, threshold: number): Promise<string>
 
 /** Remove near-white pixels on native using upng-js for PNG decode/re-encode. */
 async function removeBgNative(imageUri: string, threshold: number): Promise<string> {
-  const ImageManipulator = await import('expo-image-manipulator');
+  const ImageManipulator = await import('@/lib/native/image-manipulator');
   // Ensure PNG format, get base64
   const result = await ImageManipulator.manipulateAsync(
     imageUri,

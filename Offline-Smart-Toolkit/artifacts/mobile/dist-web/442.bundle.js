@@ -1,0 +1,2 @@
+"use strict";(self.webpackChunk_workspace_mobile=self.webpackChunk_workspace_mobile||[]).push([[442],{54442(s,e,c){async function n(){return!1}async function a(s,e){}c.d(e,{isAvailableAsync:()=>n,shareAsync:()=>a})}}]);
+//# sourceMappingURL=442.bundle.js.map

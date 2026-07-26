@@ -4,9 +4,9 @@ import {
   TouchableOpacity, Platform, Keyboard,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
-import { StatusBar } from 'expo-status-bar';
-import { useRouter } from 'expo-router';
+import { MaterialCommunityIcons, Feather } from '@/lib/native/icons';
+import { StatusBar } from '@/lib/native/status-bar';
+import { useRouter } from '@/lib/native/router';
 import { useColors } from '@/hooks/useColors';
 import { useTheme } from '@/context/ThemeContext';
 import { useApp, type Tool } from '@/context/AppContext';

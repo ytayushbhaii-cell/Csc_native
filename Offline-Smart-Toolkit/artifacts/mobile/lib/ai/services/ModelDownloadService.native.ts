@@ -31,7 +31,7 @@ import {
 // The platform adapter is dynamically imported to keep this native-only
 // implementation out of the browser bundle.
 async function getFS() {
-  const fs = await import('expo-file-system') as any;
+  const fs = await import('@/lib/native/file-system') as any;
   return fs;
 }
 

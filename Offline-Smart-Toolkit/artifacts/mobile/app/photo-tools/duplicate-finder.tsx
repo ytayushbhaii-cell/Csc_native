@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet, ActivityIndicator } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@/lib/native/icons';
 import { useColors } from '@/hooks/useColors';
 import { ToolScreenLayout } from '@/components/photo-tools/ToolScreenLayout';
 import { StatusBanner } from '@/components/photo-tools/StatusBanner';
 import { ProcessingSteps, makeSteps, updateStep } from '@/components/photo-tools/ProcessingSteps';
 import { computeImageHash, groupDuplicates } from '@/lib/photoTools/hashUtils';
 import { recordToolUsage } from '@/lib/photoTools/db';
-import * as ImagePicker from 'expo-image-picker';
+import * as ImagePicker from '@/lib/native/image-picker';
 
 const COLOR = '#8B5CF6';
 

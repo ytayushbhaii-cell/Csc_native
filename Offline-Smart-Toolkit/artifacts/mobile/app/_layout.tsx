@@ -1,5 +1,5 @@
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
+import { Stack } from '@/lib/native/router';
+import { StatusBar } from '@/lib/native/status-bar';
 import React, { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -9,8 +9,8 @@ import {
   Inter_600SemiBold,
   Inter_700Bold,
   useFonts,
-} from '@expo-google-fonts/inter';
-import * as SplashScreen from 'expo-splash-screen';
+} from '@/lib/native/google-fonts-inter';
+import * as SplashScreen from '@/lib/native/splash-screen';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 import { DrawerProvider } from '@/context/DrawerContext';
 import { AppProvider } from '@/context/AppContext';

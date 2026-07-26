@@ -2,7 +2,7 @@
  * Metro configuration for React Native / Expo (bare workflow).
  * Provides:
  *  - Monorepo watchFolders + nodeModulesPaths support
- *  - Shim redirection for expo-* packages → /shims/
+ *  - Native adapter resolution for legacy feature imports
  *  - pdf-lib CJS fix
  *  - ONNX / WASM asset extensions
  */
@@ -13,30 +13,28 @@ const fs   = require('fs');
 const projectRoot   = __dirname;
 const workspaceRoot = path.resolve(projectRoot, '../..');
 
-// ── Shim map: package name → shim file path ─────────────────────────────────
+// ── Native adapter map: legacy import name → React Native adapter ────────────
 const SHIMS = {
-  'expo':                     path.join(projectRoot, 'shims/expo.ts'),
-  'expo-router':              path.join(projectRoot, 'shims/expo-router.tsx'),
-  '@expo/vector-icons':       path.join(projectRoot, 'shims/expo-vector-icons.ts'),
-  'expo-status-bar':          path.join(projectRoot, 'shims/expo-status-bar.tsx'),
-  'expo-linear-gradient':     path.join(projectRoot, 'shims/expo-linear-gradient.ts'),
-  'expo-splash-screen':       path.join(projectRoot, 'shims/expo-splash-screen.ts'),
-  'expo-font':                path.join(projectRoot, 'shims/expo-font.ts'),
-  'expo-haptics':             path.join(projectRoot, 'shims/expo-haptics.ts'),
-  'expo-clipboard':           path.join(projectRoot, 'shims/expo-clipboard.ts'),
-  'expo-linking':             path.join(projectRoot, 'shims/expo-linking.ts'),
-  'expo-constants':           path.join(projectRoot, 'shims/expo-constants.ts'),
-  '@expo-google-fonts/inter': path.join(projectRoot, 'shims/expo-google-fonts-inter.ts'),
-  // ── Packages migrated from Expo to RN CLI alternatives ───────────────────
-  'expo-image-manipulator':   path.join(projectRoot, 'shims/expo-image-manipulator.ts'),
-  'expo-image':               path.join(projectRoot, 'shims/expo-image.ts'),
-  'expo-document-picker':     path.join(projectRoot, 'shims/expo-document-picker.ts'),
-  'expo-file-system':         path.join(projectRoot, 'shims/expo-file-system.ts'),
-  'expo-file-system/legacy':  path.join(projectRoot, 'shims/expo-file-system-legacy.native.ts'),
-  'expo-image-picker':        path.join(projectRoot, 'shims/expo-image-picker.ts'),
-  'expo-sharing':             path.join(projectRoot, 'shims/expo-sharing.ts'),
-  'expo-media-library':       path.join(projectRoot, 'shims/expo-media-library.ts'),
-  'expo-camera':              path.join(projectRoot, 'shims/expo-camera.ts'),
+  'expo-router':              path.join(projectRoot, 'lib/native/router'),
+  '@expo/vector-icons':       path.join(projectRoot, 'lib/native/icons'),
+  'expo-status-bar':          path.join(projectRoot, 'lib/native/status-bar'),
+  'expo-linear-gradient':     path.join(projectRoot, 'lib/native/linear-gradient'),
+  'expo-splash-screen':       path.join(projectRoot, 'lib/native/splash-screen'),
+  'expo-font':                path.join(projectRoot, 'lib/native/font'),
+  'expo-haptics':             path.join(projectRoot, 'lib/native/haptics'),
+  'expo-clipboard':           path.join(projectRoot, 'lib/native/clipboard'),
+  'expo-linking':             path.join(projectRoot, 'lib/native/linking'),
+  'expo-constants':           path.join(projectRoot, 'lib/native/constants'),
+  '@expo-google-fonts/inter': path.join(projectRoot, 'lib/native/google-fonts-inter'),
+  'expo-image-manipulator':   path.join(projectRoot, 'lib/native/image-manipulator'),
+  'expo-image':               path.join(projectRoot, 'lib/native/image'),
+  'expo-document-picker':     path.join(projectRoot, 'lib/native/document-picker'),
+  'expo-file-system':         path.join(projectRoot, 'lib/native/file-system'),
+  'expo-file-system/legacy':  path.join(projectRoot, 'lib/native/file-system-legacy'),
+  'expo-image-picker':        path.join(projectRoot, 'lib/native/image-picker'),
+  'expo-sharing':             path.join(projectRoot, 'lib/native/sharing'),
+  'expo-media-library':       path.join(projectRoot, 'lib/native/media-library'),
+  'expo-camera':              path.join(projectRoot, 'lib/native/camera'),
 };
 
 const defaults = getDefaultConfig(projectRoot);
@@ -53,7 +51,7 @@ const nodeModulesPaths = [
 
 // ── resolveRequest ────────────────────────────────────────────────────────────
 function resolveRequest(context, moduleName, platform) {
-  // 1. Expo shims
+  // 1. React Native adapters for legacy feature imports
   if (SHIMS[moduleName]) {
     return { filePath: SHIMS[moduleName], type: 'sourceFile' };
   }

@@ -3,7 +3,7 @@ import {
   View, Text, TouchableOpacity, StyleSheet, ActivityIndicator,
   ScrollView, Image, Platform,
 } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@/lib/native/icons';
 import { useColors } from '@/hooks/useColors';
 import { ToolScreenLayout } from '@/components/photo-tools/ToolScreenLayout';
 import { StatusBanner } from '@/components/photo-tools/StatusBanner';
@@ -81,7 +81,7 @@ export default function PdfToImageScreen() {
       a.click();
     } else {
       try {
-        const Sharing = await import('expo-sharing');
+        const Sharing = await import('@/lib/native/sharing');
         if (await Sharing.isAvailableAsync()) {
           await Sharing.shareAsync(img.uri);
         }

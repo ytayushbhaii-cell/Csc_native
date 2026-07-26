@@ -8,10 +8,10 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, Platform,
   ScrollView, Alert,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter } from '@/lib/native/router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { StatusBar } from 'expo-status-bar';
+import { MaterialCommunityIcons } from '@/lib/native/icons';
+import { StatusBar } from '@/lib/native/status-bar';
 import {
   Svg, Circle, Rect, Path, Text as SvgText, G,
 } from 'react-native-svg';
@@ -224,7 +224,7 @@ export default function CompanyStampScreen() {
       if (Platform.OS === 'web') {
         await exportFile(uri, fileName);
       } else {
-        const Sharing = await import('expo-sharing');
+        const Sharing = await import('@/lib/native/sharing');
         if (await Sharing.isAvailableAsync()) {
           await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Share Company Stamp' });
         } else {
@@ -244,7 +244,7 @@ export default function CompanyStampScreen() {
     setExporting(true);
     try {
       const uri: string = await (viewShotRef.current as any).capture();
-      const MediaLibrary = await import('expo-media-library');
+      const MediaLibrary = await import('@/lib/native/media-library');
       const { status } = await MediaLibrary.requestPermissionsAsync();
       if (status !== 'granted') { Alert.alert('Permission denied', 'Allow photo library access to save to gallery.'); return; }
       await MediaLibrary.saveToLibraryAsync(uri);

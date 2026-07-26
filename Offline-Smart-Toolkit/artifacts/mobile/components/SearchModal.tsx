@@ -9,9 +9,9 @@ import {
   StyleSheet,
   Platform,
 } from 'react-native';
-import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
+import { MaterialCommunityIcons, Feather } from '@/lib/native/icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter } from '@/lib/native/router';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
 import {

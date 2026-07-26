@@ -28,7 +28,7 @@ import {
   View, Text, TouchableOpacity, StyleSheet, Animated,
   ActivityIndicator, Platform,
 } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@/lib/native/icons';
 import { useColors } from '@/hooks/useColors';
 // Import via platform entrypoint — Metro resolves .web.ts / .native.ts automatically.
 // Never import directly from ModelDownloadService.web or .native.

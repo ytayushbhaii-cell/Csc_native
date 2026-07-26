@@ -1,5 +1,5 @@
 // PAN card processing service – 100% offline
-import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
+import { manipulateAsync, SaveFormat } from '@/lib/native/image-manipulator';
 import type { DetectResult } from '../types';
 
 export const PAN_W_MM = 85.6;

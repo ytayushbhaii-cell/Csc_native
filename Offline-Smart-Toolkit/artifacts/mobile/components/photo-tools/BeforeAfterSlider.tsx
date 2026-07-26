@@ -9,7 +9,7 @@ import {
   View, Image, Text, PanResponder, StyleSheet,
   LayoutChangeEvent, Platform, TouchableOpacity,
 } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@/lib/native/icons';
 import { useColors } from '@/hooks/useColors';
 
 interface Props {

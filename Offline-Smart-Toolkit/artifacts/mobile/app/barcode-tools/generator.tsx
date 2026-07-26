@@ -3,10 +3,10 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView,
   Platform, Alert,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter } from '@/lib/native/router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { StatusBar } from 'expo-status-bar';
+import { MaterialCommunityIcons } from '@/lib/native/icons';
+import { StatusBar } from '@/lib/native/status-bar';
 import { Svg, Rect, Text as SvgText } from 'react-native-svg';
 import ViewShot from 'react-native-view-shot';
 import { useColors } from '@/hooks/useColors';
@@ -142,7 +142,7 @@ export default function BarcodeGeneratorScreen() {
         } catch { /* fall through to download */ }
         await exportFile(uri, fileName);
       } else {
-        const Sharing = await import('expo-sharing');
+        const Sharing = await import('@/lib/native/sharing');
         if (await Sharing.isAvailableAsync()) {
           await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Share Barcode' });
         } else {
@@ -162,7 +162,7 @@ export default function BarcodeGeneratorScreen() {
     setExporting(true);
     try {
       const uri = await captureBarcode();
-      const MediaLibrary = await import('expo-media-library');
+      const MediaLibrary = await import('@/lib/native/media-library');
       const { status } = await MediaLibrary.requestPermissionsAsync();
       if (status !== 'granted') { Alert.alert('Permission denied', 'Allow photo library access to save to gallery.'); return; }
       await MediaLibrary.saveToLibraryAsync(uri);

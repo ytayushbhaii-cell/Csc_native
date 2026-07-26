@@ -1,5 +1,5 @@
 // Driving License processing service – 100% offline
-import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
+import { manipulateAsync, SaveFormat } from '@/lib/native/image-manipulator';
 import type { DetectResult } from '../types';
 
 export const DL_W_MM = 85.6;

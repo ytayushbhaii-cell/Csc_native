@@ -2,7 +2,7 @@
 // This file is ONLY bundled for native (Android) builds via Metro platform extensions.
 // Web builds use pdfToImageService.web.ts (pdfjs-dist).
 import PDFThumbnail from 'react-native-pdf-thumbnail';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from '@/lib/native/file-system';
 import type { PdfToImageResult } from '../types';
 
 /**

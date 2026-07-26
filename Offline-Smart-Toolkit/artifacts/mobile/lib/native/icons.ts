@@ -1,0 +1,1 @@
+export * from '@/shims/expo-vector-icons';

@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunk_workspace_mobile=self.webpackChunk_workspace_mobile||[]).push([[607],{75607(e,c,r){r.d(c,{cacheDirectory:()=>null,documentDirectory:()=>null,readAsStringAsync:()=>s.qc,writeAsStringAsync:()=>s.rU});var s=r(1845)}}]);

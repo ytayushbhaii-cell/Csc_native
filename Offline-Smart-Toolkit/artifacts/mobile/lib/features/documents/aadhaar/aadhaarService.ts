@@ -1,5 +1,5 @@
 // Aadhaar card processing service – 100% offline, no API calls.
-import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
+import { manipulateAsync, SaveFormat } from '@/lib/native/image-manipulator';
 import type { DetectResult } from '../types';
 
 // Standard Aadhaar dimensions (px at 300 DPI)

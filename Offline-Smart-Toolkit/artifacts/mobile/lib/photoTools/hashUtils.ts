@@ -7,7 +7,7 @@
  *
  * Pure JS — no native modules, no network. 100% offline.
  */
-import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
+import { manipulateAsync, SaveFormat } from '@/lib/native/image-manipulator';
 import { decodeToRGBA } from './pixelOps';
 
 const HASH_W = 9;   // compare 9 columns → 8 bits per row

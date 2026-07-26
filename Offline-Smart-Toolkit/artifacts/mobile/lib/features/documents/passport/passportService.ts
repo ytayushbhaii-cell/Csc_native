@@ -1,5 +1,5 @@
 // Passport photo processing service – 100% offline
-import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
+import { manipulateAsync, SaveFormat } from '@/lib/native/image-manipulator';
 
 export interface PassportSizeSpec {
   id: string;

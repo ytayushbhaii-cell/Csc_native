@@ -8,8 +8,8 @@ import {
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { StatusBar } from 'expo-status-bar';
+import { MaterialCommunityIcons } from '@/lib/native/icons';
+import { StatusBar } from '@/lib/native/status-bar';
 import { useColors } from '@/hooks/useColors';
 import { useDrawer } from '@/context/DrawerContext';
 import { useApp } from '@/context/AppContext';

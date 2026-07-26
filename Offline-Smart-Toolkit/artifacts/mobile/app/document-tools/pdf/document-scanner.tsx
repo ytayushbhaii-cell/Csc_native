@@ -8,9 +8,9 @@ import {
   View, Text, TouchableOpacity, StyleSheet, ActivityIndicator,
   Image, Platform, ScrollView,
 } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
-import * as ImageManipulator from 'expo-image-manipulator';
+import { MaterialCommunityIcons } from '@/lib/native/icons';
+import * as ImagePicker from '@/lib/native/image-picker';
+import * as ImageManipulator from '@/lib/native/image-manipulator';
 import { useColors } from '@/hooks/useColors';
 import { ToolScreenLayout } from '@/components/photo-tools/ToolScreenLayout';
 import { StatusBanner } from '@/components/photo-tools/StatusBanner';

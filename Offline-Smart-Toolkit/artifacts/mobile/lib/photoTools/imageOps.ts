@@ -1,7 +1,7 @@
 // Deterministic, fully-offline image transforms shared by every Photo Tools
 // screen. Thin wrappers around expo-image-manipulator so individual screens
 // stay small and consistent.
-import { manipulateAsync, SaveFormat, FlipType } from 'expo-image-manipulator';
+import { manipulateAsync, SaveFormat, FlipType } from '@/lib/native/image-manipulator';
 import type { PickedImage } from './types';
 
 export { SaveFormat, FlipType };

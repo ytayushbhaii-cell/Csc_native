@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { MaterialCommunityIcons } from '@/lib/native/icons';
+import { LinearGradient } from '@/lib/native/linear-gradient';
 import { useColors } from '@/hooks/useColors';
 
 interface StatCardProps {

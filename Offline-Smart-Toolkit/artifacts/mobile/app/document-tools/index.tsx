@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, TextInput, StyleSheet, Platform,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter } from '@/lib/native/router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
-import { StatusBar } from 'expo-status-bar';
-import { LinearGradient } from 'expo-linear-gradient';
+import { MaterialCommunityIcons, Feather } from '@/lib/native/icons';
+import { StatusBar } from '@/lib/native/status-bar';
+import { LinearGradient } from '@/lib/native/linear-gradient';
 import { useColors } from '@/hooks/useColors';
 import { useTheme } from '@/context/ThemeContext';
 import { useApp } from '@/context/AppContext';

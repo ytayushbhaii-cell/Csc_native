@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Platform } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import * as DocumentPicker from 'expo-document-picker';
+import { MaterialCommunityIcons } from '@/lib/native/icons';
+import * as DocumentPicker from '@/lib/native/document-picker';
 import { useColors } from '@/hooks/useColors';
 import { useTheme } from '@/context/ThemeContext';
 import { ToolScreenLayout } from '@/components/photo-tools/ToolScreenLayout';

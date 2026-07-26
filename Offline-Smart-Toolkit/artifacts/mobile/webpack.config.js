@@ -31,28 +31,6 @@ const TRANSFORM_PACKAGES_LIST = [
   '@react-native-async-storage',
   '@react-native-clipboard',
   '@react-native-community',
-  // Legacy adapter package names that ship TypeScript source or ESM.
-  'expo',
-  'expo-modules-core',
-  'expo-file-system',
-  'expo-image-picker',
-  'expo-document-picker',
-  'expo-clipboard',
-  'expo-sharing',
-  'expo-camera',
-  'expo-image',
-  'expo-image-manipulator',
-  'expo-status-bar',
-  'expo-linear-gradient',
-  'expo-splash-screen',
-  'expo-font',
-  'expo-constants',
-  'expo-linking',
-  'expo-haptics',
-  'expo-blur',
-  '@expo/vector-icons',
-  '@expo-google-fonts',
-  '@unimodules',
 ];
 
 /**
@@ -97,40 +75,27 @@ module.exports = {
       // ── Core: react-native → react-native-web ─────────────────────────────
       'react-native$': 'react-native-web',
 
-      // ── expo-router MUST use shim (app uses React Navigation) ─────────────
-      'expo-router': path.join(projectRoot, 'shims/expo-router'),
-
-      // ── All other expo packages → shims (Metro handles these via resolveRequest;
-      //    webpack needs explicit aliases for each one) ───────────────────────
-      'expo-linear-gradient': path.join(projectRoot, 'shims/expo-linear-gradient'),
-      'expo-status-bar':      path.join(projectRoot, 'shims/expo-status-bar'),
-      '@expo/vector-icons':   path.join(projectRoot, 'shims/expo-vector-icons'),
-      'expo-constants':       path.join(projectRoot, 'shims/expo-constants'),
-      'expo-font':            path.join(projectRoot, 'shims/expo-font'),
-      'expo-clipboard':       path.join(projectRoot, 'shims/expo-clipboard'),
-      'expo-haptics':         path.join(projectRoot, 'shims/expo-haptics'),
-      'expo-linking':         path.join(projectRoot, 'shims/expo-linking'),
-      'expo-splash-screen':   path.join(projectRoot, 'shims/expo-splash-screen'),
-      // expo-file-system/legacy — legacy sub-path with cacheDirectory/documentDirectory constants
-      // needed by signature bg-remove; stubs them to null on web (file I/O only runs on native)
-      'expo-file-system/legacy': path.join(projectRoot, 'shims/expo-file-system-legacy'),
-      // These packages use expo-modules-core native bindings; replace with web stubs
-      'expo-image-picker':        path.join(projectRoot, 'shims/expo-image-picker'),
-      // expo-camera — native camera bridge; scanners fall back to "not available" UI on web
-      'expo-camera':              path.join(projectRoot, 'shims/expo-camera'),
-      // expo-sharing — native share sheet; screens use Web Share API / download fallback on web
-      'expo-sharing':             path.join(projectRoot, 'shims/expo-sharing'),
-      // expo-media-library — native gallery; guarded by Platform.OS !== 'web' in screens
-      'expo-media-library':       path.join(projectRoot, 'shims/expo-media-library'),
-      // expo-image-manipulator → Canvas-API web shim (webpack picks .web.ts automatically)
-      'expo-image-manipulator':   path.join(projectRoot, 'shims/expo-image-manipulator'),
-      // expo-image → standard RN Image (react-native-web maps it to <img>)
-      'expo-image':               path.join(projectRoot, 'shims/expo-image'),
-      // expo-document-picker → browser file-input shim (webpack picks .web.ts automatically)
-      'expo-document-picker':     path.join(projectRoot, 'shims/expo-document-picker'),
-      // expo-file-system → no-op web shim (reuse legacy shim — same no-op surface)
-      'expo-file-system':         path.join(projectRoot, 'shims/expo-file-system-legacy'),
-      // expo-blur ships its own web implementation — no shim needed
+      // ── React Native adapters for legacy feature imports ──────────────────
+      'expo-router':              path.join(projectRoot, 'lib/native/router'),
+      '@expo/vector-icons':       path.join(projectRoot, 'lib/native/icons'),
+      'expo-linear-gradient':     path.join(projectRoot, 'lib/native/linear-gradient'),
+      'expo-status-bar':          path.join(projectRoot, 'lib/native/status-bar'),
+      'expo-constants':           path.join(projectRoot, 'lib/native/constants'),
+      'expo-font':               path.join(projectRoot, 'lib/native/font'),
+      'expo-clipboard':          path.join(projectRoot, 'lib/native/clipboard'),
+      'expo-haptics':            path.join(projectRoot, 'lib/native/haptics'),
+      'expo-linking':            path.join(projectRoot, 'lib/native/linking'),
+      'expo-splash-screen':      path.join(projectRoot, 'lib/native/splash-screen'),
+      '@expo-google-fonts/inter': path.join(projectRoot, 'lib/native/google-fonts-inter'),
+      'expo-file-system/legacy': path.join(projectRoot, 'lib/native/file-system-legacy'),
+      'expo-file-system':        path.join(projectRoot, 'lib/native/file-system'),
+      'expo-image-picker':       path.join(projectRoot, 'lib/native/image-picker'),
+      'expo-document-picker':    path.join(projectRoot, 'lib/native/document-picker'),
+      'expo-sharing':            path.join(projectRoot, 'lib/native/sharing'),
+      'expo-media-library':      path.join(projectRoot, 'lib/native/media-library'),
+      'expo-image-manipulator':  path.join(projectRoot, 'lib/native/image-manipulator'),
+      'expo-image':              path.join(projectRoot, 'lib/native/image'),
+      'expo-camera':             path.join(projectRoot, 'lib/native/camera'),
 
       // ── react-native-svg → web build (avoids native bridge code) ──────────
       'react-native-svg': path.join(

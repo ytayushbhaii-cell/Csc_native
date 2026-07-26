@@ -1,8 +1,8 @@
 // ─── Photo Picker for ID Card ─────────────────────────────────────────────────
 import React from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet, Platform, Alert } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
+import { MaterialCommunityIcons } from '@/lib/native/icons';
+import * as ImagePicker from '@/lib/native/image-picker';
 import { useColors } from '@/hooks/useColors';
 
 interface PhotoPickerProps {
