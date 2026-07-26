@@ -115,25 +115,26 @@ const MODEL_SPECS: Record<string, ModelSpec> = {
     id:          'ben2',
     name:        'BEN2',
     description: 'Hair & fur refinement — cleaner edges on curly/fly-away hair',
-    sizeBytes:   180 * 1024 * 1024,
+    sizeBytes:   222 * 1024 * 1024,
     downloadUrl: resolveModelUrl(
       'CSC_BEN2_MODEL_URL',
       // PramaLLC/BEN2 — Background Erase Network v2 (Apache 2.0)
-      'https://huggingface.co/PramaLLC/BEN2/resolve/main/BEN2_Base_hf.onnx',
+      'https://huggingface.co/PramaLLC/BEN2/resolve/main/BEN2_Base.onnx',
       '/models/ben2.onnx',
       // On web, HuggingFace URL is used since ben2.onnx is not bundled locally
-      'https://huggingface.co/PramaLLC/BEN2/resolve/main/BEN2_Base_hf.onnx',
+      'https://huggingface.co/PramaLLC/BEN2/resolve/main/BEN2_Base.onnx',
     ),
   },
   rmbg2: {
     id:          'rmbg2',
     name:        'RMBG-2.0',
     description: 'High-quality fallback for low-memory devices',
-    sizeBytes:   90 * 1024 * 1024,
+    sizeBytes:   176 * 1024 * 1024,
     downloadUrl: resolveModelUrl(
       'CSC_RMBG2_MODEL_URL',
-      '',
+      'https://huggingface.co/briaai/RMBG-1.4/resolve/main/onnx/model.onnx',
       '/models/rmbg-2.0.onnx',
+      'https://huggingface.co/briaai/RMBG-1.4/resolve/main/onnx/model.onnx',
     ),
   },
   u2net: {
@@ -151,11 +152,12 @@ const MODEL_SPECS: Record<string, ModelSpec> = {
     id:          'isnet',
     name:        'IS-Net',
     description: 'Best accuracy for complex scenes',
-    sizeBytes:   176 * 1024 * 1024,
+    sizeBytes:   178 * 1024 * 1024,
     downloadUrl: resolveModelUrl(
       'CSC_ISNET_MODEL_URL',
-      '',
+      'https://github.com/danielgatis/rembg/releases/download/v0.0.0/isnet-general-use.onnx',
       '/models/isnet-general.onnx',
+      'https://github.com/danielgatis/rembg/releases/download/v0.0.0/isnet-general-use.onnx',
     ),
   },
 };

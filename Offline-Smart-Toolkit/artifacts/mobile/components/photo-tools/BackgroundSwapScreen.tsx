@@ -200,12 +200,12 @@ export function BackgroundSwapScreen({
     try { envUrl = (process.env as any)?.CSC_BEN2_MODEL_URL?.trim() || null; } catch {}
     const BEN2_URL =
       envUrl ||
-      'https://huggingface.co/PramaLLC/BEN2/resolve/main/BEN2_Base_hf.onnx';
+      'https://huggingface.co/PramaLLC/BEN2/resolve/main/BEN2_Base.onnx';
     try {
       await modelDownloadService.downloadModel(
         'ben2',
         BEN2_URL,
-        180 * 1024 * 1024,
+        222 * 1024 * 1024,
         (p) => { if (!signal.aborted) setBen2Progress(p); },
         signal,
       );
