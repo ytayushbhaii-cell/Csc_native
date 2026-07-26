@@ -25,6 +25,20 @@ import { Platform } from 'react-native';
 import { loadOnnxRuntime } from './ortLoader';
 import { modelRegistry } from '../ModelRegistry';
 
+/**
+ * Returns true when running as a web page on a mobile browser.
+ * On mobile web, loading large ONNX models into ORT WASM causes "Aw, Snap!"
+ * tab crashes because the WASM heap (600 MB for BiRefNet) exceeds Chrome's
+ * per-tab memory limit. Only U2Net (4.4 MB) is safe on mobile web.
+ */
+function isMobileWebBrowser(): boolean {
+  return (
+    Platform.OS === 'web' &&
+    typeof navigator !== 'undefined' &&
+    /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+  );
+}
+
 // ─── Lazy import of download service (web only) ───────────────────────────────
 
 async function getDownloadService() {
@@ -234,6 +248,18 @@ async function loadModelSession(id: OnnxModelId): Promise<OnnxSession | null> {
     }
 
     // ── 2. Fall back to same-origin URL (dev mode / first run) ───────────────
+    // On mobile web, only U2Net (4.4 MB) is safe to load via URL.
+    // BiRefNet (44 MB) and RMBG-2.0 (176 MB) cause ORT WASM to allocate
+    // a 400-600 MB heap, which exceeds Chrome's per-tab memory limit and
+    // triggers an "Aw, Snap!" crash. Skip URL loading for large models on mobile.
+    if (isMobileWebBrowser() && id !== 'u2net') {
+      console.info(
+        `[ONNX] ${cfg.name}: skipped URL load on mobile web (too large for WASM heap — download to IndexedDB first)`,
+      );
+      modelRegistry.setStatus(id, 'ai-unavailable');
+      return null;
+    }
+
     const available = await isModelAvailableAtUrl(cfg);
     if (!available) {
       console.info(`[ONNX] ${cfg.name}: not in cache and not reachable at URL — skipping`);

@@ -63,6 +63,21 @@ export function routeImage(
   birefnetAvailable: boolean,
 ): RoutingDecision {
 
+  // ── Mobile web browser: only U2Net is safe ──────────────────────────────────
+  // On mobile Chrome/Safari, ORT WASM allocates ~600 MB for BiRefNet (44 MB) or
+  // ~300 MB for RMBG-2.0 (176 MB), both of which exceed the per-tab memory limit
+  // and cause an "Aw, Snap!" tab crash. U2Net (4.4 MB, 320px) is the only model
+  // safe for WASM on a mobile browser.
+  if (capability.isMobileWeb) {
+    return {
+      primaryModel:  'u2net',
+      useBEN2:       false,
+      fallbackModel: 'u2net',
+      reason:        'Mobile web browser — using U2Net only (large models crash WASM tab)',
+      subjectLabel:  analysis.subjectType,
+    };
+  }
+
   // ── Low-memory device: always use RMBG-2.0 to prevent OOM ──────────────────
   if (capability.preferLightModel || capability.ramGB < 4) {
     return {

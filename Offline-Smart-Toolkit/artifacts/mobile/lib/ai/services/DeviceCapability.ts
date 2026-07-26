@@ -26,6 +26,13 @@ export interface DeviceCapabilityProfile {
   preferLightModel: boolean;
   /** True if NNAPI / native GPU acceleration may be available */
   hasNPUHint: boolean;
+  /**
+   * True when running as a web page on a mobile browser (Android/iOS Chrome/Safari).
+   * On mobile web, ORT WASM creates a ~600 MB heap for large models like BiRefNet,
+   * which exceeds Chrome's per-tab memory limit and causes "Aw, Snap!" crashes.
+   * When true, routing uses only U2Net (4.4 MB) which is safe for WASM on any device.
+   */
+  isMobileWeb: boolean;
 }
 
 let _cached: DeviceCapabilityProfile | null = null;
@@ -104,9 +111,17 @@ export async function detectDeviceCapabilities(): Promise<DeviceCapabilityProfil
   const hasSIMD = await detectSIMD().catch(() => false);
   const tier = computeTier(ramGB, webgl2);
 
-  // Prefer light model if RAM < 4 GB — BiRefNet alone uses ~600 MB at 1024px
-  // Adding BEN2 on top would risk OOM on 3-4 GB devices
-  const preferLightModel = ramGB < 4;
+  // Detect mobile web browser (Android Chrome, iOS Safari, etc.)
+  // On mobile web, ORT WASM allocates a ~600 MB heap for BiRefNet (44 MB model),
+  // which exceeds the per-tab memory limit and causes "Aw, Snap!" tab crashes.
+  const isMobileWeb =
+    typeof navigator !== 'undefined' &&
+    /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+
+  // Prefer light model if RAM < 4 GB — BiRefNet alone uses ~600 MB at 1024px.
+  // Also force light model on mobile web browsers regardless of reported RAM —
+  // Chrome's tab memory limit is much lower than total device RAM.
+  const preferLightModel = ramGB < 4 || isMobileWeb;
 
   // NNAPI hint: Qualcomm / ARM Mali devices often show GPU 'Adreno' or 'Mali'
   // in the WebGL renderer string — rough heuristic for NPU capability
@@ -124,10 +139,10 @@ export async function detectDeviceCapabilities(): Promise<DeviceCapabilityProfil
   } catch { /* ignore */ }
 
   console.info(
-    `[DeviceCap] RAM=${ramGB}GB, WebGL2=${webgl2}, SIMD=${hasSIMD}, tier=${tier}, preferLight=${preferLightModel}`,
+    `[DeviceCap] RAM=${ramGB}GB, WebGL2=${webgl2}, SIMD=${hasSIMD}, tier=${tier}, preferLight=${preferLightModel}, mobileWeb=${isMobileWeb}`,
   );
 
-  _cached = { ramGB, hasWebGL2: webgl2, hasWebGL1: webgl1, hasSIMD, tier, preferLightModel, hasNPUHint };
+  _cached = { ramGB, hasWebGL2: webgl2, hasWebGL1: webgl1, hasSIMD, tier, preferLightModel, hasNPUHint, isMobileWeb };
   return _cached;
 }
 
