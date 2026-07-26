@@ -162,6 +162,21 @@ export default function SettingsScreen() {
           />
         </View>
 
+        {/* AI & Models */}
+        <Text style={[styles.sectionHeader, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>
+          AI & MODELS
+        </Text>
+        <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
+          <SettingRow
+            icon="brain"
+            iconColor="#6366F1"
+            label="AI Models"
+            value="Download / Manage"
+            onPress={() => router.push('/settings/ai-models')}
+            isLast
+          />
+        </View>
+
         {/* Backup */}
         <Text style={[styles.sectionHeader, { color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }]}>
           {t('settings.sectionBackup')}

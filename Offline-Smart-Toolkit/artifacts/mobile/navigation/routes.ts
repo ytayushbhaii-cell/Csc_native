@@ -25,6 +25,7 @@ export const ROUTE_TO_SCREEN: Record<string, string> = {
   '/settings/print-size':     'SettingsPrintSize',
   '/settings/default-folder': 'SettingsDefaultFolder',
   '/settings/backup':         'SettingsBackup',
+  '/settings/ai-models':      'SettingsAiModels',
 
   // ── Photo Tools ───────────────────────────────────────────────────────────
   '/photo-tools':                     'PhotoTools',

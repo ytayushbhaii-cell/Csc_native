@@ -25,6 +25,7 @@ import SettingsLanguage      from '@/app/settings/language';
 import SettingsPrintSize     from '@/app/settings/print-size';
 import SettingsDefaultFolder from '@/app/settings/default-folder';
 import SettingsBackup        from '@/app/settings/backup';
+import SettingsAiModels      from '@/app/settings/ai-models';
 
 // ── Photo Tools ───────────────────────────────────────────────────────────
 import PhotoTools            from '@/app/photo-tools/index';
@@ -188,6 +189,7 @@ export function AppNavigator() {
       <Stack.Screen name="SettingsPrintSize"     component={SettingsPrintSize} />
       <Stack.Screen name="SettingsDefaultFolder" component={SettingsDefaultFolder} />
       <Stack.Screen name="SettingsBackup"        component={SettingsBackup} />
+      <Stack.Screen name="SettingsAiModels"      component={SettingsAiModels} />
 
       {/* ── Photo Tools ──────────────────────────────────────────── */}
       <Stack.Screen name="PhotoTools"            component={PhotoTools} />
