@@ -130,9 +130,32 @@ function fmtETA(sec: number) {
   return `${Math.floor(sec / 60)}m ${Math.ceil(sec % 60)}s remaining`;
 }
 
-function isDownloadable(url: string): boolean {
-  if (Platform.OS === 'web') return true;
+/** True if this URL can be fetched from the internet (not a local relative path). */
+function isExternalUrl(url: string): boolean {
   return url.startsWith('https://') || url.startsWith('http://');
+}
+
+/** Returns false for relative paths — those files must be bundled locally. */
+function isDownloadable(url: string): boolean {
+  return isExternalUrl(url);
+}
+
+/** Extract a clean, human-friendly error from a raw download error message. */
+function friendlyError(raw: string | null): string {
+  if (!raw) return 'Download failed.';
+  if (raw.includes('404') || raw.includes('not found') || raw.includes('Not Found'))
+    return 'Model not publicly available at this source.';
+  if (raw.includes('network') || raw.includes('fetch') || raw.includes('Failed to fetch'))
+    return 'Network error — check your connection and try again.';
+  if (raw.includes('integrity') || raw.includes('bytes'))
+    return 'File verification failed — download may have been interrupted.';
+  // Strip any URL-like segments from the message
+  return raw.replace(/https?:\/\/\S+/g, '').replace(/\/models\/\S+/g, '').trim() || 'Download failed.';
+}
+
+/** Filename hint extracted from a local model path, e.g. "/models/rmbg-2.0.onnx" → "rmbg-2.0.onnx" */
+function localFilename(url: string): string {
+  return url.split('/').pop() ?? url;
 }
 
 // ─── Per-model state ──────────────────────────────────────────────────────────
@@ -244,7 +267,7 @@ export default function AiModelsScreen() {
       } else {
         setStates(prev => ({
           ...prev,
-          [m.id]: { status: 'error', progress: null, error: e?.message ?? 'Download failed.', cachedBytes: null },
+          [m.id]: { status: 'error', progress: null, error: friendlyError(e?.message ?? null), cachedBytes: null },
         }));
       }
     }
@@ -280,9 +303,9 @@ export default function AiModelsScreen() {
     }));
   }, []);
 
-  // ── Summary bar counts ──────────────────────────────────────────────────
-  const cachedCount   = MODELS.filter(m => states[m.id]?.status === 'cached').length;
-  const missingCount  = MODELS.filter(m => states[m.id]?.status === 'missing' || states[m.id]?.status === 'error').length;
+  // ── Summary bar counts (only downloadable models count as "missing") ────
+  const cachedCount    = MODELS.filter(m => states[m.id]?.status === 'cached').length;
+  const missingCount   = MODELS.filter(m => isDownloadable(m.downloadUrl) && (states[m.id]?.status === 'missing' || states[m.id]?.status === 'error')).length;
   const downloadingNow = MODELS.some(m => states[m.id]?.status === 'downloading');
 
   return (
@@ -410,31 +433,42 @@ function ModelCard({ model: m, state: s, colors, onDownload, onCancel, onDelete 
 
       {(s.status === 'missing' || s.status === 'error') && (
         <View style={styles.actionArea}>
-          {s.error && (
-            <Text style={[styles.errorText, { color: '#EF4444', fontFamily: 'Inter_400Regular' }]}>
-              {s.error}
-            </Text>
-          )}
+          {/* Local-only: file must be placed manually */}
           {!isDownloadable(m.downloadUrl) ? (
-            <View style={[styles.unavailRow, { backgroundColor: colors.muted + '30', borderRadius: 8 }]}>
-              <MaterialCommunityIcons name="alert-circle-outline" size={14} color={colors.mutedForeground} />
+            <View style={[styles.unavailRow, { backgroundColor: colors.border + '50', borderRadius: 8 }]}>
+              <MaterialCommunityIcons name="folder-arrow-down-outline" size={16} color={colors.mutedForeground} />
               <Text style={[styles.unavailText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-                No download URL — configure{' '}
-                <Text style={{ fontFamily: 'Inter_600SemiBold' }}>CSC_{m.id.toUpperCase()}_MODEL_URL</Text>
-                {' '}env var for native builds.
+                Not available online.{'\n'}
+                <Text style={{ fontFamily: 'Inter_600SemiBold' }}>
+                  Place {localFilename(m.downloadUrl)} in{' '}
+                </Text>
+                <Text style={{ fontFamily: 'Inter_400Regular' }}>
+                  public/models/ folder to enable.
+                </Text>
               </Text>
             </View>
           ) : (
-            <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: m.iconColor }]}
-              onPress={onDownload}
-              activeOpacity={0.85}
-            >
-              <MaterialCommunityIcons name="download-outline" size={16} color="#fff" />
-              <Text style={[styles.actionBtnText, { fontFamily: 'Inter_700Bold' }]}>
-                Download · {fmtBytes(m.sizeBytes)}
-              </Text>
-            </TouchableOpacity>
+            /* External URL — show error (clean) + retry button */
+            <>
+              {s.error && (
+                <View style={[styles.errorRow, { backgroundColor: '#EF444410', borderRadius: 7 }]}>
+                  <MaterialCommunityIcons name="alert-circle-outline" size={14} color="#EF4444" />
+                  <Text style={[styles.errorText, { color: '#EF4444', fontFamily: 'Inter_400Regular', flex: 1 }]}>
+                    {s.error}
+                  </Text>
+                </View>
+              )}
+              <TouchableOpacity
+                style={[styles.actionBtn, { backgroundColor: m.iconColor }]}
+                onPress={onDownload}
+                activeOpacity={0.85}
+              >
+                <MaterialCommunityIcons name="download-outline" size={16} color="#fff" />
+                <Text style={[styles.actionBtnText, { fontFamily: 'Inter_700Bold' }]}>
+                  {s.status === 'error' ? 'Retry' : 'Download'} · {fmtBytes(m.sizeBytes)}
+                </Text>
+              </TouchableOpacity>
+            </>
           )}
         </View>
       )}
@@ -555,9 +589,10 @@ const styles = StyleSheet.create({
 
   // Action
   actionArea: { gap: 8 },
-  errorText:  { fontSize: 12 },
-  unavailRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, padding: 8 },
-  unavailText:{ flex: 1, fontSize: 11, lineHeight: 16 },
+  errorRow:   { flexDirection: 'row', alignItems: 'flex-start', gap: 7, padding: 8 },
+  errorText:  { fontSize: 12, lineHeight: 17 },
+  unavailRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, padding: 10 },
+  unavailText:{ flex: 1, fontSize: 12, lineHeight: 18 },
   actionBtn:  {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 8, paddingVertical: 12, borderRadius: 8,
