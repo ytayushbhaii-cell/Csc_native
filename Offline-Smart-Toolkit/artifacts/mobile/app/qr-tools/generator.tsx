@@ -54,13 +54,15 @@ export default function QRGeneratorScreen() {
   const [exporting, setExporting] = useState(false);
   const viewShotRef = useRef<ViewShot>(null);
   const qrSvgRef = useRef<any>(null);
+  const qrContainerId = 'qr-capture-container';
 
-  /** Capture QR as PNG data-URL (web: SVG→Canvas; native: ViewShot) */
+  /** Capture QR as PNG data-URL (web: DOM SVG→Canvas; native: ViewShot) */
   const captureQR = async (): Promise<string> => {
     if (Platform.OS === 'web') {
-      // react-native-qrcode-svg exposes the SVG DOM element via getRef on web
-      const svgEl = qrSvgRef.current;
-      if (!svgEl) throw new Error('SVG ref not available');
+      // Query the actual SVG DOM node from the container div
+      const container = document.getElementById(qrContainerId);
+      const svgEl = container?.querySelector('svg');
+      if (!svgEl) throw new Error('QR SVG element not found in DOM');
       const svgData = new XMLSerializer().serializeToString(svgEl);
       const padded = qrSize + 40;
       const canvas = document.createElement('canvas');
@@ -298,7 +300,7 @@ export default function QRGeneratorScreen() {
           <>
             <Text style={[styles.label, { color: colors.mutedForeground, fontFamily: 'Inter_500Medium' }]}>Preview</Text>
             <View style={[styles.previewCard, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
-              <ViewShot ref={viewShotRef} options={{ format: 'png', quality: 1 }} style={{ backgroundColor: bgColor, padding: 20, borderRadius: 12 }}>
+              <ViewShot ref={viewShotRef} options={{ format: 'png', quality: 1 }} style={{ backgroundColor: bgColor, padding: 20, borderRadius: 12 }} {...(Platform.OS === 'web' ? { id: qrContainerId } as any : {})}>
                 <QRCode
                   value={qrValue}
                   size={qrSize}
