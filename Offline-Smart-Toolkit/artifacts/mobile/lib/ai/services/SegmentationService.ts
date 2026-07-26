@@ -143,23 +143,35 @@ async function decodeWeb(uri: string): Promise<DecodeResult> {
   const origW = img.naturalWidth;
   const origH = img.naturalHeight;
 
-  // Decode at the full original resolution.
-  // Downscaling is intentionally disabled — each ONNX model handles its own
-  // internal input resize (see runModel → resizeRGBABilinear to cfg.inputSize).
-  // Running the pipeline at full resolution maximises guided-filter quality and
-  // ensures refineAlpha() operates on maximum detail.
-  const canvas = new OffscreenCanvas(origW, origH);
+  // Cap processing resolution to avoid "Aw Snap!" (OOM) crashes on mobile browsers.
+  // A phone camera photo at 4000×3000 produces a 48 MB RGBA buffer. Combined with
+  // the 44 MB BiRefNet model + ORT WASM heap, peak usage exceeds the ~150 MB tab
+  // memory limit on Android Chrome, causing a silent tab crash.
+  // 2048px gives excellent BG removal quality (well above the 1024px model input size)
+  // while keeping the pixel buffer under ~16 MB — safe on all mobile devices.
+  const MAX_OUTPUT_SIDE = 2048;
+  const scale = Math.min(1, MAX_OUTPUT_SIDE / Math.max(origW, origH));
+  const outW  = Math.max(1, Math.round(origW * scale));
+  const outH  = Math.max(1, Math.round(origH * scale));
+
+  const canvas = new OffscreenCanvas(outW, outH);
   const ctx    = canvas.getContext('2d')!;
-  ctx.drawImage(img, 0, 0);
+  ctx.drawImage(img, 0, 0, outW, outH);
   const origPixels = new Uint8ClampedArray(
-    ctx.getImageData(0, 0, origW, origH).data,
+    ctx.getImageData(0, 0, outW, outH).data,
   );
 
-  console.info(`[Segmentation] Image decoded at full resolution: ${origW}×${origH}`);
+  if (scale < 1) {
+    console.info(
+      `[Segmentation] Image scaled for memory safety: ${origW}×${origH} → ${outW}×${outH} (${Math.round(scale * 100)}%)`,
+    );
+  } else {
+    console.info(`[Segmentation] Image decoded: ${outW}×${outH}`);
+  }
 
-  // modelPixels === origPixels: no pre-decode downscale.
-  // runModel in onnxBackend resizes to cfg.inputSize (e.g. 1024) before inference.
-  return { modelPixels: origPixels, modelW: origW, modelH: origH, origPixels, origW, origH };
+  // modelPixels === origPixels at capped resolution.
+  // runModel in onnxBackend further resizes to cfg.inputSize (1024px) for inference.
+  return { modelPixels: origPixels, modelW: outW, modelH: outH, origPixels, origW: outW, origH: outH };
 }
 
 async function decodeNative(uri: string): Promise<DecodeResult> {
