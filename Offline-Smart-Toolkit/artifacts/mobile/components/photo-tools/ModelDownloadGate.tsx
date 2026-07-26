@@ -409,7 +409,7 @@ export function ModelDownloadGate({ modelIds, optionalModelIds = [], onReady, ac
           <MaterialCommunityIcons name="robot-love-outline" size={24} color={accentColor} />
           <View style={styles.headerText}>
             <Text style={[styles.cardTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-              AI Models Required
+              Offline Processing Required
             </Text>
             <Text style={[styles.cardSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
               Download once — works fully offline forever
@@ -429,7 +429,7 @@ export function ModelDownloadGate({ modelIds, optionalModelIds = [], onReady, ac
               </Text>
             </View>
           </View>
-          {validRequired.map(id => {
+          {validRequired.map((id, index) => {
             const spec = MODEL_SPECS[id];
             if (!spec) return null;
             return (
@@ -437,13 +437,13 @@ export function ModelDownloadGate({ modelIds, optionalModelIds = [], onReady, ac
                 <MaterialCommunityIcons name="check-circle-outline" size={14} color={accentColor} />
                 <View style={styles.modelInfo}>
                   <Text style={[styles.modelName, { color: colors.foreground, fontFamily: 'Inter_500Medium' }]}>
-                    {spec.name}
+                    Core processing file {index + 1}
                     <Text style={[styles.modelSize, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
                       {' '}· {fmtBytes(spec.sizeBytes)}
                     </Text>
                   </Text>
                   <Text style={[styles.modelDesc, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-                    {spec.description}
+                    Required for offline image processing
                   </Text>
                 </View>
               </View>
@@ -464,7 +464,7 @@ export function ModelDownloadGate({ modelIds, optionalModelIds = [], onReady, ac
                 </Text>
               </View>
             </View>
-            {validOptional.map(id => {
+            {validOptional.map((id, index) => {
               const spec = MODEL_SPECS[id];
               if (!spec) return null;
               return (
@@ -472,13 +472,13 @@ export function ModelDownloadGate({ modelIds, optionalModelIds = [], onReady, ac
                   <MaterialCommunityIcons name="star-outline" size={14} color="#22C55E" />
                   <View style={styles.modelInfo}>
                     <Text style={[styles.modelName, { color: colors.foreground, fontFamily: 'Inter_500Medium' }]}>
-                      {spec.name}
+                      Quality enhancement file {index + 1}
                       <Text style={[styles.modelSize, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
                         {' '}· {fmtBytes(spec.sizeBytes)}
                       </Text>
                     </Text>
                     <Text style={[styles.modelDesc, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-                      {spec.description}
+                      Optional file for extra edge detail
                     </Text>
                   </View>
                 </View>
@@ -509,7 +509,7 @@ export function ModelDownloadGate({ modelIds, optionalModelIds = [], onReady, ac
         >
           <MaterialCommunityIcons name="download-outline" size={18} color="#fff" />
           <Text style={[styles.downloadBtnText, { fontFamily: 'Inter_700Bold' }]}>
-            Download All Models
+              Download Processing Files
           </Text>
         </TouchableOpacity>
       </View>

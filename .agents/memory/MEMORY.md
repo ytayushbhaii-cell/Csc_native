@@ -14,3 +14,4 @@
 - [Multi-theme system](multi-theme-system.md) — themeId string replaces isDark bool; ThemeContext exposes setThemeById; useColors returns per-theme palette.
 - [Android build environment](android-build-environment.md) — JDK alone is insufficient; verify Android SDK/ANDROID_HOME before diagnosing Gradle native compile failures.
 - [React Native CLI compatibility adapters](rn-cli-compat-adapters.md) — preserve legacy screen imports through local platform adapters backed by installed CLI modules.
+- [Mobile background-removal safety](mobile-bg-removal-safety.md) — mobile web must use U2Net-only, 1024px processing, fast matte refinement, and no debug mask snapshots to avoid tab OOM.

@@ -7,24 +7,24 @@
  *
  * ─── Web pipeline ────────────────────────────────────────────────────────────
  *  1. EXIF orientation detection & correction
- *  2. Canvas API decode → RGBA at original resolution (zero quality loss)
+ *  2. Canvas API decode → RGBA at a memory-safe processing resolution
  *  3. Image analysis: blur, brightness, contrast, subject type, edge density
  *  4. Intelligent model routing: BiRefNet / BiRefNet+BEN2 / RMBG-2.0
  *  5. Noise reduction & auto-enhancement on inference copy only
  *  6. Resize to ≤1024px for model inference
  *  7. Multi-model ONNX: BiRefNet → RMBG-2.0 → U2Net → IS-Net (priority order)
- *  8. Bilinear upsample alpha → ORIGINAL resolution
+ *  8. Bilinear upsample alpha → memory-safe processing resolution
  *  9. BEN2 refinement pass (when routing decision = useBEN2)
- * 10. refineAlpha() post-processing at original resolution
+ * 10. refineAlpha() post-processing at memory-safe processing resolution
  *     (hole fill → SAM2 trimap → guided filter → hair pass → halo removal → edge polish)
- * 11. Composite at original resolution → PNG (every pixel preserved)
+ * 11. Composite at the memory-safe processing resolution → PNG
  *
  * ─── Native pipeline ─────────────────────────────────────────────────────────
  *  BodyPix MobileNetV1 + same refineAlpha() pipeline.
  *
- * ─── Resolution guarantee ────────────────────────────────────────────────────
- *  Internal resizing is for inference only. The final PNG is ALWAYS at the
- *  original image resolution. 720p/1080p/2K/4K images are all supported.
+ * ─── Resolution safety ───────────────────────────────────────────────────────
+ *  Large camera images are capped before CPU post-processing so mobile
+ *  browsers do not exhaust the tab memory budget.
  *
  * ─── Cancel support ──────────────────────────────────────────────────────────
  *  Pass an AbortSignal to removeBackgroundPro / blurBackgroundPro.
@@ -109,7 +109,9 @@ async function getNativeBodyPix() {
 
 export function warmUpSegmentation(): void {
   warmUpOnnxModels();
-  warmUpBEN2();
+  // BEN2 is an optional on-demand refinement. Loading it during app startup
+  // wastes memory and is unsafe on mobile web; it is loaded only when the
+  // routing decision explicitly allows it.
   if (Platform.OS !== 'web') {
     getNativeBodyPix().catch(() => {});
   }
@@ -118,6 +120,12 @@ export function warmUpSegmentation(): void {
 // ─── Image decode ─────────────────────────────────────────────────────────────
 
 const MAX_MODEL_SIDE = 1024;
+
+function isMobileWebBrowser(): boolean {
+  return Platform.OS === 'web' &&
+    typeof navigator !== 'undefined' &&
+    /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+}
 
 interface DecodeResult {
   /** RGBA pixels at MODEL resolution (≤1024px) — fed to the ONNX model */
@@ -147,9 +155,10 @@ async function decodeWeb(uri: string): Promise<DecodeResult> {
   // A phone camera photo at 4000×3000 produces a 48 MB RGBA buffer. Combined with
   // the 44 MB BiRefNet model + ORT WASM heap, peak usage exceeds the ~150 MB tab
   // memory limit on Android Chrome, causing a silent tab crash.
-  // 2048px gives excellent BG removal quality (well above the 1024px model input size)
-  // while keeping the pixel buffer under ~16 MB — safe on all mobile devices.
-  const MAX_OUTPUT_SIDE = 2048;
+  // Keep mobile browser processing at the same 1024px cap as model
+  // inference. Desktop browsers retain a 2048px working surface for better
+  // export detail without putting Android Chrome's tab memory at risk.
+  const MAX_OUTPUT_SIDE = isMobileWebBrowser() ? MAX_MODEL_SIDE : 2048;
   const scale = Math.min(1, MAX_OUTPUT_SIDE / Math.max(origW, origH));
   const outW  = Math.max(1, Math.round(origW * scale));
   const outH  = Math.max(1, Math.round(origH * scale));
@@ -248,7 +257,10 @@ function withTimeout<T>(p: Promise<T>, ms: number, label: string, signal?: Abort
   ]);
 }
 
-const TIMEOUT_MS = 180_000; // extended for BEN2 refinement pass
+// This is a final guard for corrupt images or model failures. Mobile web
+// intentionally skips the heavy BEN2 path, so a 90s limit should never be
+// reached during normal processing.
+const TIMEOUT_MS = 90_000;
 
 // ─── Progress step callbacks ──────────────────────────────────────────────────
 
@@ -370,7 +382,13 @@ export async function segmentSubject(uri: string, signal?: AbortSignal): Promise
     const result = await onnxAlpha(decoded, analysis, decision, signal);
     checkAbort(signal);
     if (result) {
-      alpha   = refineAlpha(result.alpha, decoded.origPixels, decoded.origW, decoded.origH);
+      alpha   = refineAlpha(
+        result.alpha,
+        decoded.origPixels,
+        decoded.origW,
+        decoded.origH,
+        { fast: capability.isMobileWeb },
+      );
       backend = decision.primaryModel as SegmentationResult['backend'];
     } else if (Platform.OS !== 'web') {
       // Native fallback: BodyPix (runs without any model download)
@@ -408,13 +426,13 @@ export async function segmentSubject(uri: string, signal?: AbortSignal): Promise
  *
  * ─── Full pipeline ────────────────────────────────────────────────────────────
  *  1. EXIF orientation correction (auto, transparent to caller)
- *  2. Image decode at original resolution
+ *  2. Image decode at a memory-safe processing resolution
  *  3. Image analysis + intelligent model routing
  *  4. Noise reduction + auto-enhancement on inference copy
  *  5. Multi-model ONNX inference (BiRefNet primary)
  *  6. BEN2 refinement (when routing says useBEN2 = true)
  *  7. Professional alpha matting (hole fill, guided filter, hair pass, halo removal)
- *  8. Composite at original resolution → lossless PNG
+ *  8. Composite at the memory-safe processing resolution → lossless PNG
  *
  * @param uri         - input image URI
  * @param bgColor     - null = transparent, [r,g,b] = solid colour
@@ -533,7 +551,11 @@ export async function removeBackgroundPro(
 
       // ── Stage 4: BEN2 Refinement (when routing says useBEN2) ─────────────
       let coarseAlpha = result.alpha;
-      const shouldRunBEN2 = routingDecision.useBEN2 || (hd && ben2Ready);
+      // Never force BEN2 from the HD toggle on a mobile browser. A cached
+      // 180–220 MB BEN2 session plus WASM and image buffers can still crash
+      // Android Chrome even when the primary model is lightweight.
+      const shouldRunBEN2 =
+        !capability.isMobileWeb && (routingDecision.useBEN2 || (hd && ben2Ready));
 
       if (shouldRunBEN2) {
         step('ben2', 'running');
@@ -572,7 +594,13 @@ export async function removeBackgroundPro(
       checkAbort(signal);
 
       const matteStart = Date.now();
-      alpha = refineAlpha(coarseAlpha, decoded.origPixels, decoded.origW, decoded.origH, { hd });
+      alpha = refineAlpha(
+        coarseAlpha,
+        decoded.origPixels,
+        decoded.origW,
+        decoded.origH,
+        { hd, fast: capability.isMobileWeb },
+      );
       console.info(`[Segmentation] ✅ Alpha matting done in ${Date.now() - matteStart}ms`);
       saveMask('3_final_alpha', alpha, decoded.origW, decoded.origH);
       checkAbort(signal);

@@ -39,7 +39,7 @@
 import { guidedFilterTriplePass } from './guidedFilter';
 import { sam2StyleRefinement } from './maskRefine';
 import { erode, dilate } from './maskRefine';
-import { applyEdgePostProcessing } from './edgeOps';
+import { applyEdgePostProcessing, hardClipAlpha } from './edgeOps';
 import {
   removeWhiteHalo,
   erodeAlphaEdge,
@@ -212,6 +212,11 @@ export interface RefineOptions {
   hd?: boolean;
   /** Skip hole filling (for masks that are already clean) */
   skipHoleFill?: boolean;
+  /**
+   * Mobile-safe fast path. It intentionally avoids the multi-pass CPU matting
+   * pipeline because those passes operate on every pixel on the JS thread.
+   */
+  fast?: boolean;
 }
 
 /**
@@ -243,6 +248,16 @@ export function refineAlpha(
 
   // ── Stats: coarse alpha from model (before any matting) ──────────────────
   logAlphaStats('coarse (pre-matte)', alpha, w, h);
+
+  // Mobile browsers have a much smaller tab memory budget than desktop
+  // browsers. A single color-guided pass preserves soft edges while avoiding
+  // the hole-fill/SAM2/quad-pass/hair stack that can block the JS thread for
+  // minutes on a phone image.
+  if (opts.fast) {
+    if (w < 32 || h < 32) return alpha;
+    const filtered = guidedFilterRGBA(pixels, alpha, w, h, 2, 1e-2);
+    return hardClipAlpha(filtered, 0.02, 0.98);
+  }
 
   // Stage 1: Fill subject holes (morphological close)
   // Skipped for very small images where it would distort results

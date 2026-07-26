@@ -323,7 +323,7 @@ export default function AiModelsScreen() {
         </TouchableOpacity>
         <View style={styles.headerText}>
           <Text style={[styles.headerTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-            AI Models
+            Offline Processing
           </Text>
           <Text style={[styles.headerSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
             {cachedCount}/{MODELS.length} downloaded
@@ -337,7 +337,7 @@ export default function AiModelsScreen() {
           >
             <MaterialCommunityIcons name="download-multiple" size={16} color="#fff" />
             <Text style={[styles.downloadAllText, { fontFamily: 'Inter_700Bold' }]}>
-              Download All
+              Download All Files
             </Text>
           </TouchableOpacity>
         )}
@@ -403,20 +403,20 @@ function ModelCard({ model: m, state: s, colors, onDownload, onCancel, onDelete 
           <MaterialCommunityIcons name="brain" size={22} color={m.iconColor} />
         </View>
 
-        {/* Name + desc */}
+        {/* Generic processing file label */}
         <View style={styles.modelMeta}>
           <View style={styles.modelNameRow}>
             <Text style={[styles.modelName, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-              {m.name}
+              Offline processing file
             </Text>
             <View style={[styles.badge, { backgroundColor: m.badgeColor + '1A' }]}>
               <Text style={[styles.badgeText, { color: m.badgeColor, fontFamily: 'Inter_600SemiBold' }]}>
-                {m.badge}
+                {fmtBytes(m.sizeBytes)}
               </Text>
             </View>
           </View>
           <Text style={[styles.modelDesc, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-            {m.description}
+            Stored on this device for private offline processing
           </Text>
         </View>
       </View>

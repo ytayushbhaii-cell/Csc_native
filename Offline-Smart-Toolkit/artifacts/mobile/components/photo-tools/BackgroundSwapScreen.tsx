@@ -66,7 +66,7 @@ interface BackgroundSwapScreenProps {
 // IDs match the step callbacks emitted by SegmentationService
 
 const STANDARD_STEPS = [
-  { id: 'decode',  label: 'Loading image at original resolution…' },
+  { id: 'decode',  label: 'Loading image safely…' },
   { id: 'analyze', label: 'Analyzing subject for local processing…' },
   { id: 'detect',  label: 'Detecting subject…' },
   { id: 'ben2',    label: 'Refining hair & edges…' },
@@ -76,7 +76,7 @@ const STANDARD_STEPS = [
 ];
 
 const HD_STEPS = [
-  { id: 'decode',  label: 'Loading image at original resolution…' },
+  { id: 'decode',  label: 'Loading image safely for HD…' },
   { id: 'analyze', label: 'Analyzing subject for HD processing…' },
   { id: 'detect',  label: 'Detecting subject in HD…' },
   { id: 'ben2',    label: 'Refining hair & edges at high detail…' },
@@ -97,8 +97,19 @@ const HD_STEPS = [
 //   ben2  — BEN2 hair & edge sub-pixel refinement (180 MB)
 //   rmbg2 — RMBG-2.0 high-quality fallback (90 MB)
 //   isnet — IS-Net for complex scenes (176 MB)
-const REQUIRED_MODEL_IDS = ['birefnet', 'u2net'];
-const OPTIONAL_MODEL_IDS = ['ben2', 'rmbg2', 'isnet'];
+const MOBILE_WEB =
+  Platform.OS === 'web' &&
+  typeof navigator !== 'undefined' &&
+  /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+
+// Mobile browser WASM cannot safely hold the large models. U2Net is the
+// deliberate safe model there; desktop/native keeps the higher-quality pack.
+const REQUIRED_MODEL_IDS = MOBILE_WEB ? ['u2net'] : ['birefnet', 'u2net'];
+
+// Optional models are loaded on demand. Auto-downloading 400+ MB of optional
+// files made first-use slow and increased memory pressure without improving
+// the default path.
+const OPTIONAL_MODEL_IDS: string[] = [];
 
 // ─── Export format type ───────────────────────────────────────────────────────
 type ExportFormat = 'png' | 'jpg' | 'webp';
@@ -197,7 +208,12 @@ export function BackgroundSwapScreen({
     const signal = ben2AbortRef.current.signal;
     // Safely read env var — process.env may be a frozen string in webpack bundles
     let envUrl: string | null = null;
-    try { envUrl = (process.env as any)?.CSC_BEN2_MODEL_URL?.trim() || null; } catch {}
+    try {
+      const env = (globalThis as any)?.process?.env;
+      envUrl = typeof env?.CSC_BEN2_MODEL_URL === 'string'
+        ? env.CSC_BEN2_MODEL_URL.trim() || null
+        : null;
+    } catch {}
     const BEN2_URL =
       envUrl ||
       'https://huggingface.co/PramaLLC/BEN2/resolve/main/BEN2_Base.onnx';
@@ -375,7 +391,7 @@ export function BackgroundSwapScreen({
           <AIModelBadge service="segmentation" showUpgradeHint />
 
           {/* ── BEN2 compact strip ─────────────────────────────────────────── */}
-          {ben2Cached === false && !ben2Downloading && (
+          {!MOBILE_WEB && ben2Cached === false && !ben2Downloading && (
             <TouchableOpacity
               style={[styles.ben2Strip, { backgroundColor: '#22C55E0D', borderColor: '#22C55E30', borderRadius: colors.radius }]}
               onPress={handleBen2Download}
@@ -404,7 +420,7 @@ export function BackgroundSwapScreen({
           )}
 
           {/* BEN2 downloading progress — compact */}
-          {ben2Downloading && (
+          {!MOBILE_WEB && ben2Downloading && (
             <View style={[styles.ben2Strip, { backgroundColor: '#22C55E0D', borderColor: '#22C55E30', borderRadius: colors.radius }]}>
               <ActivityIndicator size="small" color="#22C55E" />
               <View style={{ flex: 1, gap: 4 }}>
@@ -424,7 +440,7 @@ export function BackgroundSwapScreen({
           )}
 
           {/* BEN2 ready — tiny pill */}
-          {ben2Cached === true && (
+          {!MOBILE_WEB && ben2Cached === true && (
             <View style={[styles.ben2Strip, { backgroundColor: '#22C55E0A', borderColor: '#22C55E25', borderRadius: colors.radius }]}>
               <MaterialCommunityIcons name="check-circle" size={14} color="#22C55E" />
               <Text style={[{ color: '#22C55E', fontSize: 12, fontFamily: 'Inter_500Medium', flex: 1 }]}>
@@ -515,7 +531,7 @@ export function BackgroundSwapScreen({
               <View style={styles.qualityRow}>
                 {([
                   { id: 'standard' as QualityMode, label: 'Standard', icon: 'lightning-bolt', desc: 'Fast · balanced edge detail' },
-                  { id: 'hd'       as QualityMode, label: 'HD',        icon: 'shimmer',        desc: 'Slower · extra hair refinement' },
+                  { id: 'hd'       as QualityMode, label: 'HD',        icon: 'shimmer',        desc: MOBILE_WEB ? 'Safe HD · fast mobile mode' : 'Extra hair refinement' },
                 ] as const).map((q) => {
                   const active = quality === q.id;
                   return (

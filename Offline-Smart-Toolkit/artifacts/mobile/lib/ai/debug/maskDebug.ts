@@ -43,6 +43,11 @@ if (typeof window !== 'undefined') {
   window.__segDebug = _store;
 }
 
+function isMobileWeb(): boolean {
+  return typeof navigator !== 'undefined' &&
+    /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+}
+
 // ─── Alpha statistics ─────────────────────────────────────────────────────────
 
 export interface AlphaStats {
@@ -112,6 +117,10 @@ export function saveMask(
   h: number,
 ): void {
   if (typeof window === 'undefined') return;
+  // Each debug snapshot creates a canvas, Blob URL, and data URL. Keeping
+  // three copies alive is useful on desktop but unnecessarily increases the
+  // memory footprint of an Android/iOS browser tab during removal.
+  if (isMobileWeb()) return;
   if (typeof OffscreenCanvas === 'undefined') return;
 
   const stats = computeStats(alpha);

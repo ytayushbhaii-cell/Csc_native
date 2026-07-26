@@ -297,9 +297,23 @@ function getOrLoadSession(id: OnnxModelId): Promise<OnnxSession | null> {
  * Call at app startup to amortise first-inference latency.
  */
 export function warmUpOnnxModels(): void {
-  for (const id of PRIORITY_ORDER) {
-    getOrLoadSession(id).catch(() => {});
-  }
+  // Never start every model concurrently. ORT WASM can allocate hundreds of
+  // MB per session even for models that are never used. On mobile browsers
+  // this used to preload BiRefNet/RMBG/IS-Net alongside U2Net and crash the
+  // tab before the user even selected a photo.
+  const order = isMobileWebBrowser()
+    ? (['u2net'] as OnnxModelId[])
+    : (['birefnet', 'u2net'] as OnnxModelId[]);
+
+  void (async () => {
+    for (const id of order) {
+      try {
+        await getOrLoadSession(id);
+      } catch {
+        // The normal inference path still reports a useful error/fallback.
+      }
+    }
+  })();
 }
 
 // Legacy export
@@ -552,7 +566,13 @@ export async function runSegmentationWithFallback(
   if (signal?.aborted) return null;
 
   // Use router-supplied order if provided; otherwise fall back to static priority
-  const order = preferredOrder && preferredOrder.length > 0 ? preferredOrder : PRIORITY_ORDER;
+  // Routing returns U2Net for mobile web, but the generic fallback tail would
+  // otherwise append BiRefNet/RMBG/IS-Net after it. Never load those large
+  // models as a fallback in a mobile tab: a failed lightweight inference must
+  // become a clear error, not an OOM crash.
+  const order = isMobileWebBrowser()
+    ? (['u2net'] as OnnxModelId[])
+    : (preferredOrder && preferredOrder.length > 0 ? preferredOrder : PRIORITY_ORDER);
 
   // If we already found a working model AND it is at the head of the preferred order,
   // keep using it to amortise session load cost.
