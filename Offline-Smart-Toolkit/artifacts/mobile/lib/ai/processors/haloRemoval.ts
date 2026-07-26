@@ -291,8 +291,9 @@ export function erodeAlphaEdge(
           minA = Math.min(minA, alpha[(y + dy) * w + (x + dx)]);
         }
       }
-      // Soft erosion: weighted pull toward minimum neighbor
-      out[i] = alpha[i] * 0.82 + minA * 0.18;
+      // Soft erosion: weighted pull toward minimum neighbor.
+      // 0.88/0.12 (was 0.82/0.18) — less aggressive, preserves thin subject edges.
+      out[i] = alpha[i] * 0.88 + minA * 0.12;
     }
   }
   return out;

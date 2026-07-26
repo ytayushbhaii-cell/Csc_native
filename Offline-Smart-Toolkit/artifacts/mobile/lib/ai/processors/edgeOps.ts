@@ -250,8 +250,11 @@ export function applyEdgePostProcessing(
 ): Float32Array {
   let a = featherAlphaEdge(alpha, w, h, featherPx);
   a = antiAliasAlpha(a, w, h);
-  a = sharpensAlphaCurve(a, 1.2);
-  // Final cleanup: snap near-zero pixels to 0, near-one to 1
-  a = hardClipAlpha(a, 0.04, 0.97);
+  // 1.1 (not 1.2) — avoids over-sharpening fine hair strands and fingers.
+  // 1.2 was pushing mid-alpha hair pixels (0.3–0.6) toward 0, chopping them off.
+  a = sharpensAlphaCurve(a, 1.1);
+  // Lower lo-threshold 0.04 → 0.02: preserves thin semi-transparent hair strands
+  // that 0.04 was incorrectly clipping to zero.
+  a = hardClipAlpha(a, 0.02, 0.97);
   return a;
 }
