@@ -73,17 +73,25 @@ function env(key: string): string | null {
   return v && v.trim().length > 0 ? v.trim() : null;
 }
 
-function resolveModelUrl(envKey: string, publicDefault: string, relativeFallback: string): string {
-  // 1. Environment override (works on all platforms)
+/**
+ * Resolves a model download URL with platform-aware priority:
+ *   1. CSC_*_MODEL_URL env var override (all platforms)
+ *   2. webUrl — HuggingFace / CDN URL used on web for models not bundled locally
+ *      (birefnet & u2net are served via webpack from public/models/, large optional
+ *       models like BEN2 use HuggingFace since no local copy exists)
+ *   3. relativeFallback — webpack-served relative path (web, bundled models)
+ *   4. nativeDefault — absolute HTTPS URL for native APK builds
+ */
+function resolveModelUrl(
+  envKey: string,
+  nativeDefault: string,
+  relativeFallback: string,
+  webUrl?: string,            // external URL used on web when local file isn't bundled
+): string {
   const fromEnv = env(envKey);
   if (fromEnv) return fromEnv;
-  // 2. On web: use relative path — files are served from public/models/ by webpack.
-  //    Never use publicDefault on web: external URLs often have CORS restrictions or
-  //    change paths (404), whereas the bundled local file always works.
-  if (Platform.OS === 'web') return relativeFallback;
-  // 3. On native: use known public HTTPS URL (relative paths have no server to resolve them).
-  if (publicDefault) return publicDefault;
-  // 4. Last resort relative path (only useful if a dev server is somehow running)
+  if (Platform.OS === 'web') return webUrl || relativeFallback;
+  if (nativeDefault) return nativeDefault;
   return relativeFallback;
 }
 
@@ -92,34 +100,33 @@ function resolveModelUrl(envKey: string, publicDefault: string, relativeFallback
 const MODEL_SPECS: Record<string, ModelSpec> = {
   birefnet: {
     id:          'birefnet',
-    name:        'BiRefNet (Primary)',
-    description: 'Highest quality hair & edge detail',
-    // Actual quantized model file size on disk (birefnet-q.onnx).
-    // This must match the real file — ModelDownloadService enforces ±5% integrity check.
+    name:        'BiRefNet',
+    description: 'Primary segmentation — best edge detail',
     sizeBytes:   44 * 1024 * 1024,
     downloadUrl: resolveModelUrl(
       'CSC_BIREFNET_MODEL_URL',
-      // Public HuggingFace mirror of the quantized BiRefNet ONNX (ZhengPeng7/BiRefNet, MIT licence).
-      // Override with CSC_BIREFNET_MODEL_URL to use your own hosted copy.
       'https://huggingface.co/ZhengPeng7/BiRefNet/resolve/main/onnx/birefnet-q.onnx',
-      '/models/birefnet-q.onnx',  // relative path works only in web preview
+      '/models/birefnet-q.onnx',
     ),
   },
   ben2: {
     id:          'ben2',
-    name:        'BEN2 (Hair Refinement)',
-    description: 'Secondary refinement for hair, fur & complex edges',
+    name:        'BEN2',
+    description: 'Hair & fur refinement — cleaner edges on curly/fly-away hair',
     sizeBytes:   180 * 1024 * 1024,
     downloadUrl: resolveModelUrl(
       'CSC_BEN2_MODEL_URL',
-      '',
+      // PramaLLC/BEN2 — Background Erase Network v2 (Apache 2.0)
+      'https://huggingface.co/PramaLLC/BEN2/resolve/main/BEN2_Base_hf.onnx',
       '/models/ben2.onnx',
+      // On web, HuggingFace URL is used since ben2.onnx is not bundled locally
+      'https://huggingface.co/PramaLLC/BEN2/resolve/main/BEN2_Base_hf.onnx',
     ),
   },
   rmbg2: {
     id:          'rmbg2',
-    name:        'RMBG-2.0 (Fallback)',
-    description: 'High-quality fallback & low-memory mode',
+    name:        'RMBG-2.0',
+    description: 'High-quality fallback for low-memory devices',
     sizeBytes:   90 * 1024 * 1024,
     downloadUrl: resolveModelUrl(
       'CSC_RMBG2_MODEL_URL',
@@ -129,21 +136,19 @@ const MODEL_SPECS: Record<string, ModelSpec> = {
   },
   u2net: {
     id:          'u2net',
-    name:        'U2Net-Portrait (Compact)',
-    description: 'Fast 4.4 MB fallback model',
-    sizeBytes:   4.4 * 1024 * 1024, // rembg u2netp.onnx ~4.4 MB; 5% tolerance in integrity check covers minor variation
+    name:        'U2Net',
+    description: 'Compact 4.4 MB fallback model',
+    sizeBytes:   4.4 * 1024 * 1024,
     downloadUrl: resolveModelUrl(
       'CSC_U2NET_MODEL_URL',
-      // Known public URL — available without hosting your own model file.
-      // Source: github.com/danielgatis/rembg (MIT licence)
       'https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2netp.onnx',
       '/models/u2netp.onnx',
     ),
   },
   isnet: {
     id:          'isnet',
-    name:        'IS-Net (High-Accuracy)',
-    description: 'Best for complex scenes',
+    name:        'IS-Net',
+    description: 'Best accuracy for complex scenes',
     sizeBytes:   176 * 1024 * 1024,
     downloadUrl: resolveModelUrl(
       'CSC_ISNET_MODEL_URL',
@@ -390,6 +395,9 @@ export function ModelDownloadGate({ modelIds, optionalModelIds = [], onReady, ac
 
   // ── Render: needs_download ────────────────────────────────────────────────
   if (gateState === 'needs_download') {
+    const requiredSize = validRequired.reduce((s, id) => s + (MODEL_SPECS[id]?.sizeBytes ?? 0), 0);
+    const optionalSize = validOptional.reduce((s, id) => s + (MODEL_SPECS[id]?.sizeBytes ?? 0), 0);
+
     return (
       <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: 12 }]}>
         {/* Header */}
@@ -397,19 +405,89 @@ export function ModelDownloadGate({ modelIds, optionalModelIds = [], onReady, ac
           <MaterialCommunityIcons name="robot-love-outline" size={24} color={accentColor} />
           <View style={styles.headerText}>
             <Text style={[styles.cardTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-              AI Model Required
+              AI Models Required
             </Text>
             <Text style={[styles.cardSub, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-              Download once — works offline forever
+              Download once — works fully offline forever
             </Text>
           </View>
         </View>
 
-        {/* Storage requirement */}
+        {/* Required models */}
+        <View style={[styles.modelSection, { borderColor: colors.border }]}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: 'Inter_600SemiBold' }]}>
+              Core Pack
+            </Text>
+            <View style={[styles.badge, { backgroundColor: accentColor + '20' }]}>
+              <Text style={[styles.badgeText, { color: accentColor, fontFamily: 'Inter_600SemiBold' }]}>
+                Required · {fmtBytes(requiredSize)}
+              </Text>
+            </View>
+          </View>
+          {validRequired.map(id => {
+            const spec = MODEL_SPECS[id];
+            if (!spec) return null;
+            return (
+              <View key={id} style={styles.modelRow}>
+                <MaterialCommunityIcons name="check-circle-outline" size={14} color={accentColor} />
+                <View style={styles.modelInfo}>
+                  <Text style={[styles.modelName, { color: colors.foreground, fontFamily: 'Inter_500Medium' }]}>
+                    {spec.name}
+                    <Text style={[styles.modelSize, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+                      {' '}· {fmtBytes(spec.sizeBytes)}
+                    </Text>
+                  </Text>
+                  <Text style={[styles.modelDesc, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+                    {spec.description}
+                  </Text>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+
+        {/* Optional models (only show if any are downloadable) */}
+        {validOptional.length > 0 && (
+          <View style={[styles.modelSection, { borderColor: colors.border }]}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: 'Inter_600SemiBold' }]}>
+                Quality Upgrade Pack
+              </Text>
+              <View style={[styles.badge, { backgroundColor: '#22C55E20' }]}>
+                <Text style={[styles.badgeText, { color: '#22C55E', fontFamily: 'Inter_600SemiBold' }]}>
+                  Recommended · {fmtBytes(optionalSize)}
+                </Text>
+              </View>
+            </View>
+            {validOptional.map(id => {
+              const spec = MODEL_SPECS[id];
+              if (!spec) return null;
+              return (
+                <View key={id} style={styles.modelRow}>
+                  <MaterialCommunityIcons name="star-outline" size={14} color="#22C55E" />
+                  <View style={styles.modelInfo}>
+                    <Text style={[styles.modelName, { color: colors.foreground, fontFamily: 'Inter_500Medium' }]}>
+                      {spec.name}
+                      <Text style={[styles.modelSize, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+                        {' '}· {fmtBytes(spec.sizeBytes)}
+                      </Text>
+                    </Text>
+                    <Text style={[styles.modelDesc, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
+                      {spec.description}
+                    </Text>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        )}
+
+        {/* Total storage */}
         <View style={[styles.storageRow, { backgroundColor: accentColor + '0D', borderRadius: 8 }]}>
           <MaterialCommunityIcons name="sd" size={14} color={accentColor} />
           <Text style={[styles.storageText, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-            Requires ~{fmtBytes(totalSize)} device storage
+            Total ~{fmtBytes(totalSize)} device storage required
           </Text>
         </View>
 
@@ -427,7 +505,7 @@ export function ModelDownloadGate({ modelIds, optionalModelIds = [], onReady, ac
         >
           <MaterialCommunityIcons name="download-outline" size={18} color="#fff" />
           <Text style={[styles.downloadBtnText, { fontFamily: 'Inter_700Bold' }]}>
-            Download AI Model
+            Download All Models
           </Text>
         </TouchableOpacity>
       </View>
@@ -521,4 +599,15 @@ const styles = StyleSheet.create({
   successTextBlock:{ flex: 1 },
   successTitle:   { fontSize: 14 },
   successSub:     { fontSize: 12, marginTop: 2 },
+  // Model list styles
+  modelSection:   { borderWidth: 1, borderRadius: 8, padding: 10, gap: 8 },
+  sectionHeader:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  sectionTitle:   { fontSize: 12, letterSpacing: 0.2 },
+  badge:          { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 4 },
+  badgeText:      { fontSize: 10, letterSpacing: 0.3 },
+  modelRow:       { flexDirection: 'row', alignItems: 'flex-start', gap: 7 },
+  modelInfo:      { flex: 1 },
+  modelName:      { fontSize: 12 },
+  modelSize:      { fontSize: 11 },
+  modelDesc:      { fontSize: 11, marginTop: 1 },
 });
