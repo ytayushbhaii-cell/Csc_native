@@ -69,8 +69,10 @@ interface ModelSpec {
 //     CSC_BEN2_MODEL_URL       — your BEN2 .onnx HTTPS URL (~180 MB)
 
 function env(key: string): string | null {
-  const v = (process.env as Record<string, string | undefined>)[key];
-  return v && v.trim().length > 0 ? v.trim() : null;
+  try {
+    const v = (process.env as Record<string, string | undefined> | undefined)?.[key];
+    return v && v.trim().length > 0 ? v.trim() : null;
+  } catch { return null; }
 }
 
 /**

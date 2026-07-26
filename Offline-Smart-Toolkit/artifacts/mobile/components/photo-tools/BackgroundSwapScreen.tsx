@@ -195,11 +195,12 @@ export function BackgroundSwapScreen({
     setBen2Progress(null);
     ben2AbortRef.current = new AbortController();
     const signal = ben2AbortRef.current.signal;
+    // Safely read env var — process.env may be a frozen string in webpack bundles
+    let envUrl: string | null = null;
+    try { envUrl = (process.env as any)?.CSC_BEN2_MODEL_URL?.trim() || null; } catch {}
     const BEN2_URL =
-      (process.env as any).CSC_BEN2_MODEL_URL?.trim() ||
-      (Platform.OS === 'web'
-        ? 'https://huggingface.co/PramaLLC/BEN2/resolve/main/BEN2_Base_hf.onnx'
-        : 'https://huggingface.co/PramaLLC/BEN2/resolve/main/BEN2_Base_hf.onnx');
+      envUrl ||
+      'https://huggingface.co/PramaLLC/BEN2/resolve/main/BEN2_Base_hf.onnx';
     try {
       await modelDownloadService.downloadModel(
         'ben2',
@@ -373,87 +374,60 @@ export function BackgroundSwapScreen({
           </View>
           <AIModelBadge service="segmentation" showUpgradeHint />
 
-          {/* ── BEN2 Hair Quality Upgrade Card ───────────────────────────────
-               Shown when BEN2 is not yet downloaded. Disappears once ready. */}
+          {/* ── BEN2 compact strip ─────────────────────────────────────────── */}
           {ben2Cached === false && !ben2Downloading && (
-            <View style={[styles.upgradeCard, { backgroundColor: colors.card, borderColor: '#22C55E40', borderRadius: colors.radius }]}>
-              <View style={styles.upgradeHeader}>
-                <View style={[styles.upgradeBadge, { backgroundColor: '#22C55E20' }]}>
-                  <MaterialCommunityIcons name="star-shooting-outline" size={14} color="#22C55E" />
-                  <Text style={[styles.upgradeBadgeText, { color: '#22C55E', fontFamily: 'Inter_700Bold' }]}>
-                    Quality Upgrade
+            <TouchableOpacity
+              style={[styles.ben2Strip, { backgroundColor: '#22C55E0D', borderColor: '#22C55E30', borderRadius: colors.radius }]}
+              onPress={handleBen2Download}
+              activeOpacity={0.8}
+            >
+              <MaterialCommunityIcons name="star-shooting-outline" size={15} color="#22C55E" />
+              <View style={{ flex: 1 }}>
+                <Text style={[{ color: colors.foreground, fontSize: 12, fontFamily: 'Inter_600SemiBold' }]}>
+                  BEN2 · Better Hair Edges
+                  <Text style={[{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}> · ~180 MB</Text>
+                </Text>
+                {ben2Error ? (
+                  <Text style={[{ color: '#EF4444', fontSize: 11, fontFamily: 'Inter_400Regular' }]} numberOfLines={1}>
+                    {ben2Error}
                   </Text>
+                ) : (
+                  <Text style={[{ color: colors.mutedForeground, fontSize: 11, fontFamily: 'Inter_400Regular' }]}>
+                    Optional quality upgrade — tap to download
+                  </Text>
+                )}
+              </View>
+              <View style={[styles.ben2DownloadBtn, { backgroundColor: '#22C55E' }]}>
+                <MaterialCommunityIcons name="download" size={14} color="#fff" />
+              </View>
+            </TouchableOpacity>
+          )}
+
+          {/* BEN2 downloading progress — compact */}
+          {ben2Downloading && (
+            <View style={[styles.ben2Strip, { backgroundColor: '#22C55E0D', borderColor: '#22C55E30', borderRadius: colors.radius }]}>
+              <ActivityIndicator size="small" color="#22C55E" />
+              <View style={{ flex: 1, gap: 4 }}>
+                <View style={[styles.ben2Track, { backgroundColor: colors.border }]}>
+                  <View style={[styles.ben2Fill, { width: `${ben2Progress?.percentage ?? 0}%` as any, backgroundColor: '#22C55E' }]} />
                 </View>
-                <Text style={[styles.upgradeSize, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-                  ~180 MB
+                <Text style={[{ color: colors.mutedForeground, fontSize: 11, fontFamily: 'Inter_400Regular' }]}>
+                  {ben2Progress
+                    ? `${Math.round(ben2Progress.percentage)}% · ${(ben2Progress.bytesDownloaded / 1024 / 1024).toFixed(1)} / ${(ben2Progress.totalBytes / 1024 / 1024).toFixed(0)} MB${ben2Progress.speedMBps > 0.01 ? ` · ${ben2Progress.speedMBps.toFixed(1)} MB/s` : ''}`
+                    : 'Starting…'}
                 </Text>
               </View>
-              <Text style={[styles.upgradeTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold' }]}>
-                BEN2 — Better Hair Edges
-              </Text>
-              <Text style={[styles.upgradeDesc, { color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }]}>
-                Download once to get cleaner results on curly hair, flyaways & fur. Runs fully offline after download.
-              </Text>
-              {ben2Error && (
-                <Text style={[styles.upgradeError, { color: '#EF4444', fontFamily: 'Inter_400Regular' }]}>
-                  {ben2Error}
-                </Text>
-              )}
-              <TouchableOpacity
-                style={[styles.upgradeBtn, { backgroundColor: '#22C55E', borderRadius: colors.radius - 2 }]}
-                onPress={handleBen2Download}
-                activeOpacity={0.85}
-              >
-                <MaterialCommunityIcons name="download-outline" size={16} color="#fff" />
-                <Text style={[styles.upgradeBtnText, { fontFamily: 'Inter_700Bold' }]}>
-                  Download BEN2
-                </Text>
+              <TouchableOpacity onPress={() => ben2AbortRef.current?.abort()} style={{ padding: 4 }}>
+                <Text style={[{ color: colors.mutedForeground, fontSize: 11, fontFamily: 'Inter_500Medium' }]}>Cancel</Text>
               </TouchableOpacity>
             </View>
           )}
 
-          {/* BEN2 downloading progress */}
-          {ben2Downloading && (
-            <View style={[styles.upgradeCard, { backgroundColor: colors.card, borderColor: '#22C55E40', borderRadius: colors.radius }]}>
-              <View style={styles.upgradeHeader}>
-                <ActivityIndicator size="small" color="#22C55E" />
-                <Text style={[styles.upgradeTitle, { color: colors.foreground, fontFamily: 'Inter_700Bold', flex: 1 }]}>
-                  Downloading BEN2…
-                </Text>
-                <TouchableOpacity onPress={() => ben2AbortRef.current?.abort()}>
-                  <Text style={[{ color: colors.mutedForeground, fontSize: 12, fontFamily: 'Inter_500Medium' }]}>
-                    Cancel
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              {ben2Progress && (
-                <>
-                  <View style={[styles.ben2Track, { backgroundColor: colors.border }]}>
-                    <View style={[styles.ben2Fill, { width: `${ben2Progress.percentage}%` as any, backgroundColor: '#22C55E' }]} />
-                  </View>
-                  <View style={styles.ben2Stats}>
-                    <Text style={[{ color: '#22C55E', fontSize: 18, fontFamily: 'Inter_700Bold' }]}>
-                      {Math.round(ben2Progress.percentage)}%
-                    </Text>
-                    <Text style={[{ color: colors.mutedForeground, fontSize: 11, fontFamily: 'Inter_400Regular' }]}>
-                      {(ben2Progress.bytesDownloaded / 1024 / 1024).toFixed(1)} / {(ben2Progress.totalBytes / 1024 / 1024).toFixed(0)} MB
-                    </Text>
-                    {ben2Progress.speedMBps > 0.01 && (
-                      <Text style={[{ color: colors.mutedForeground, fontSize: 11, fontFamily: 'Inter_400Regular', marginLeft: 'auto' as any }]}>
-                        {ben2Progress.speedMBps.toFixed(1)} MB/s
-                      </Text>
-                    )}
-                  </View>
-                </>
-              )}
-            </View>
-          )}
-
-          {/* BEN2 ready confirmation */}
+          {/* BEN2 ready — tiny pill */}
           {ben2Cached === true && (
-            <View style={[styles.ben2Ready, { backgroundColor: '#22C55E10', borderColor: '#22C55E30', borderRadius: colors.radius }]}>
-              <MaterialCommunityIcons name="check-circle" size={15} color="#22C55E" />
-              <Text style={[{ color: '#22C55E', fontSize: 12, fontFamily: 'Inter_500Medium' }]}>
+            <View style={[styles.ben2Strip, { backgroundColor: '#22C55E0A', borderColor: '#22C55E25', borderRadius: colors.radius }]}>
+              <MaterialCommunityIcons name="check-circle" size={14} color="#22C55E" />
+              <Text style={[{ color: '#22C55E', fontSize: 12, fontFamily: 'Inter_500Medium', flex: 1 }]}>
                 BEN2 active — hair & edge quality enhanced
               </Text>
             </View>
@@ -785,4 +759,9 @@ const styles = StyleSheet.create({
   hdExportText:     { fontSize: 13 },
   reprocessBtn:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderWidth: 1, marginTop: 4 },
   reprocessText:    { fontSize: 12 },
+  // BEN2 compact strip
+  ben2Strip:        { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, paddingVertical: 9, borderWidth: 1 },
+  ben2DownloadBtn:  { width: 28, height: 28, borderRadius: 7, alignItems: 'center', justifyContent: 'center' },
+  ben2Track:        { height: 4, borderRadius: 2, overflow: 'hidden' },
+  ben2Fill:         { height: '100%', borderRadius: 2 },
 });
