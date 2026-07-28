@@ -1,7 +1,7 @@
 workflows:
   csc-smart-toolkit-android:
     name: CSC Smart Toolkit — Android Release
-    max_build_duration: 60
+    max_build_duration: 90
     environment:
       vars:
         PACKAGE_NAME: "com.cscsmarttoolkit.app"
@@ -11,7 +11,9 @@ workflows:
     scripts:
       # ── 1. Install pnpm ────────────────────────────────────────────────────
       - name: Install pnpm
-        script: npm install -g pnpm@10.26.1 --force
+        script: |
+          npm install -g pnpm@10.26.1 --force
+          pnpm --version
 
       # ── 2. JS dependencies (pnpm workspace) ───────────────────────────────
       - name: Install JS dependencies
@@ -19,17 +21,21 @@ workflows:
           cd $CM_BUILD_DIR/Offline-Smart-Toolkit
           pnpm install --no-frozen-lockfile
 
-      # ── 2b. Mobile npm dependencies (required for Gradle autolinking) ─────
-      # The mobile package has its own package-lock.json with pinned native
-      # module versions. npm ci installs them into artifacts/mobile/node_modules
-      # so that `react-native config` (called by autolinkLibrariesFromCommand())
-      # can discover and link all native modules during the Gradle configure phase.
+      # ── 3. Mobile npm dependencies (required for Gradle autolinking) ──────
+      # npm ci installs all native modules into artifacts/mobile/node_modules so
+      # that `react-native config` (called by autolinkLibrariesFromCommand()
+      # during the Gradle configure phase) can discover and link every native
+      # module. package-lock.json pins exact versions.
       - name: Install mobile npm dependencies
         script: |
+          node --version
+          npm --version
           cd $CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile
           npm ci
 
-      # ── 3. Android SDK components ─────────────────────────────────────────
+      # ── 4. Android SDK components & local.properties ──────────────────────
+      # Codemagic exposes the Android SDK as ANDROID_HOME on all machine types;
+      # ANDROID_SDK_ROOT is a deprecated alias — accept either.
       - name: Accept Android SDK licences & install components
         script: |
           yes | sdkmanager --licenses 2>/dev/null || true
@@ -38,23 +44,32 @@ workflows:
             "build-tools;35.0.0" \
             "ndk;27.1.12297006" \
             2>/dev/null || true
-          echo "sdk.dir=$ANDROID_SDK_ROOT" > \
-            $CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android/local.properties
+          ANDROID_SDK="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          if [ -z "$ANDROID_SDK" ]; then
+            echo "ERROR: Neither ANDROID_SDK_ROOT nor ANDROID_HOME is set"
+            exit 1
+          fi
+          echo "sdk.dir=$ANDROID_SDK" > \
+            "$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android/local.properties"
+          echo "✓ local.properties:"
+          cat "$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android/local.properties"
 
-      # ── 4. Verify signing files ────────────────────────────────────────────
+      # ── 5. Verify signing files ────────────────────────────────────────────
       - name: Verify signing files
         script: |
           KEY="$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android/key.properties"
           KS="$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android/app/release.keystore"
           [ -f "$KEY" ] && echo "✓ key.properties found" || { echo "✗ MISSING: key.properties"; exit 1; }
           [ -f "$KS"  ] && echo "✓ release.keystore found" || { echo "✗ MISSING: release.keystore"; exit 1; }
+          echo "  storeFile : $(grep storeFile  "$KEY" | cut -d= -f2)"
+          echo "  keyAlias  : $(grep keyAlias   "$KEY" | cut -d= -f2)"
 
-      # ── 5. Build Release APK ──────────────────────────────────────────────
+      # ── 6. Build Release APK ──────────────────────────────────────────────
       - name: Build Release APK
         script: |
           export PATH="$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/node_modules/.bin:$PATH"
-          mkdir -p $CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs
-          cd $CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android
+          mkdir -p "$CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs"
+          cd "$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android"
           chmod +x gradlew
           ./gradlew assembleRelease \
             --no-daemon \
@@ -62,33 +77,34 @@ workflows:
             --max-workers 2 \
             --stacktrace \
             -PhermesEnabled=true \
-            2>&1 | tee $CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs/release-apk.log
+            2>&1 | tee "$CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs/release-apk.log"
           BUILD_EXIT=${PIPESTATUS[0]}
           if [ $BUILD_EXIT -ne 0 ]; then
             echo ""; echo "══ FIRST FAILURE LINE ══"
             grep -m1 "FAILURE\|error:\|Exception\|What went wrong" \
-              $CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs/release-apk.log || true
+              "$CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs/release-apk.log" || true
           fi
           exit $BUILD_EXIT
 
-      # ── 6. Build Release AAB (Play Store) ─────────────────────────────────
+      # ── 7. Build Release AAB (Play Store) ─────────────────────────────────
       - name: Build Release AAB
         script: |
           export PATH="$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/node_modules/.bin:$PATH"
-          mkdir -p $CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs
-          cd $CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android
+          mkdir -p "$CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs"
+          cd "$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android"
+          chmod +x gradlew
           ./gradlew bundleRelease \
             --no-daemon \
             --console=plain \
             --max-workers 2 \
             --stacktrace \
             -PhermesEnabled=true \
-            2>&1 | tee $CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs/release-aab.log
+            2>&1 | tee "$CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs/release-aab.log"
           BUILD_EXIT=${PIPESTATUS[0]}
           if [ $BUILD_EXIT -ne 0 ]; then
             echo ""; echo "══ FIRST FAILURE LINE ══"
             grep -m1 "FAILURE\|error:\|Exception\|What went wrong" \
-              $CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs/release-aab.log || true
+              "$CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs/release-aab.log" || true
           fi
           exit $BUILD_EXIT
 
