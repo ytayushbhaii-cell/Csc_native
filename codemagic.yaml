@@ -59,20 +59,39 @@ workflows:
           fi
 
           # The @react-native/gradle-plugin npm package ships only Kotlin source,
-          # no pre-built JARs. We must compile them before the android Gradle run.
+          # no pre-built JARs. pnpm (step 2) runs before npm ci (step 3) and its
+          # virtual-store layout strips the gradlew executable from the installed
+          # package directory, so we cannot rely on node_modules having gradlew.
           #
-          # IMPORTANT: use the plugin's OWN gradlew (Gradle 8.14.3), NOT the
-          # android project's gradlew (8.11.1). The plugin's settings.gradle.kts
-          # was written for 8.14.3 and uses APIs absent in earlier versions.
-          echo "⚠ JARs missing — building with plugin's own gradlew (Gradle 8.14.3)..."
-          cd "$RN_PLUGIN"
+          # Fix: download the package tarball fresh from the npm registry (which
+          # always contains gradlew), extract to a temp dir, and build there with
+          # the plugin's own Gradle 8.14.3 wrapper. Copy the resulting JARs to the
+          # node_modules location where settings.gradle's buildscript classpath
+          # looks for them.
+          RN_PLUGIN_VERSION="0.81.5"
+          TMPDIR_BUILD=$(mktemp -d)
+          echo "⚠ JARs missing — downloading @react-native/gradle-plugin@${RN_PLUGIN_VERSION}..."
+          cd "$TMPDIR_BUILD"
+          npm pack "@react-native/gradle-plugin@${RN_PLUGIN_VERSION}" --quiet
+          TGZFILE=$(ls *.tgz | head -1)
+          [ -z "$TGZFILE" ] && { echo "ERROR: npm pack failed"; exit 1; }
+          tar -xzf "$TGZFILE"
+          cd package
+
+          echo "Building :settings-plugin:jar and :shared:jar (Gradle 8.14.3)..."
           chmod +x gradlew
           ./gradlew :settings-plugin:jar :shared:jar \
             --no-daemon --console=plain \
             2>&1 | tail -80
 
-          ls -lh "$SJAR" && echo "✓ settings-plugin.jar built"
-          ls -lh "$HJAR" && echo "✓ shared.jar built"
+          echo "Copying JARs to node_modules..."
+          mkdir -p "$RN_PLUGIN/settings-plugin/build/libs" \
+                   "$RN_PLUGIN/shared/build/libs"
+          cp settings-plugin/build/libs/settings-plugin.jar "$SJAR"
+          cp shared/build/libs/shared.jar "$HJAR"
+
+          ls -lh "$SJAR" && echo "✓ settings-plugin.jar installed"
+          ls -lh "$HJAR" && echo "✓ shared.jar installed"
 
       # ── 4. Android SDK components & local.properties ──────────────────────
       # Codemagic exposes the Android SDK as ANDROID_HOME on all machine types;
