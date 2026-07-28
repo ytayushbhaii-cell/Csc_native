@@ -6,6 +6,9 @@ pluginManagement {
     def workspace = file("../../../node_modules/@react-native/gradle-plugin")
     def pnpmStore = file("../../../node_modules/.pnpm/node_modules/@react-native/gradle-plugin")
     def rnPlugin  = (local.exists() ? local : workspace.exists() ? workspace : pnpmStore).canonicalFile
+    // includeBuild is required for project-phase plugins:
+    //   com.facebook.react          (app/build.gradle)
+    //   com.facebook.react.rootproject (android/build.gradle)
     includeBuild(rnPlugin.absolutePath)
     repositories {
         google()
@@ -14,20 +17,49 @@ pluginManagement {
     }
 }
 
-// Standard React Native 0.74+ approach: resolve com.facebook.react.settings from
-// the includeBuild composite declared above. Works correctly with Gradle 8.11.1.
-// (Gradle 8.12+ broke subproject-plugin resolution from includeBuild composites,
-// which is why we pin Gradle to 8.11.1 in gradle-wrapper.properties.)
-plugins {
-    id("com.facebook.react.settings")
+// ── Why buildscript + apply instead of plugins {} ────────────────────────────
+// Gradle's includeBuild in pluginManagement only exposes ROOT-PROJECT plugins
+// from the included composite. com.facebook.react.settings lives inside
+// :settings-plugin, which @react-native/gradle-plugin registers as a NESTED
+// COMPOSITE BUILD (includeBuild("settings-plugin") in its own settings.gradle).
+// Nested composites are not propagated to the parent, so `plugins {}` always
+// fails with "not found in any included builds".
+//
+// Solution: load the pre-compiled JARs via buildscript classpath and apply
+// the plugin the legacy way. The Codemagic step "Pre-build RN Gradle plugin
+// JARs" ensures these JARs exist before the main Gradle run.
+buildscript {
+    def local     = file("../node_modules/@react-native/gradle-plugin")
+    def workspace = file("../../../node_modules/@react-native/gradle-plugin")
+    def pnpmStore = file("../../../node_modules/.pnpm/node_modules/@react-native/gradle-plugin")
+    def rnPlugin  = (local.exists() ? local : workspace.exists() ? workspace : pnpmStore).canonicalFile
+    repositories {
+        mavenCentral()
+        google()
+    }
+    dependencies {
+        // Transitive deps of shared.jar — NOT fat-jarred, must be explicit.
+        classpath("com.google.code.gson:gson:2.8.9")
+        classpath("com.google.guava:guava:31.0.1-jre")
+        // Kotlin stdlib: guarantee ABI compatibility with Kotlin 2.1.20-compiled JARs.
+        classpath("org.jetbrains.kotlin:kotlin-stdlib:2.1.20")
+        // The two JARs that provide ReactSettingsPlugin / ReactSettingsExtension.
+        classpath(files(
+            "${rnPlugin}/settings-plugin/build/libs/settings-plugin.jar",
+            "${rnPlugin}/shared/build/libs/shared.jar"
+        ))
+    }
 }
+
+// Apply via legacy API — works with the buildscript classpath loaded above.
+apply plugin: "com.facebook.react.settings"
 
 extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
     // Prefer explicit node + absolute binary path so Gradle's JVM subprocess
     // does NOT need react-native on $PATH (Gradle may not inherit shell PATH).
     // file() resolves relative to android/ → mobile/node_modules/.bin/react-native.
     // Falls back to the default (npx @react-native-community/cli config) when
-    // node_modules/.bin/react-native is absent (e.g. npm ci not yet run).
+    // node_modules/.bin/react-native is absent (e.g. only hoisted by pnpm).
     def rnBin = file("../node_modules/.bin/react-native")
     if (rnBin.exists()) {
         ex.autolinkLibrariesFromCommand(['node', '--no-warnings', rnBin.absolutePath, 'config'])

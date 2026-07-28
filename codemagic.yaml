@@ -39,6 +39,37 @@ workflows:
           cd $CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile
           npm ci
 
+      # ── 3b. Pre-build RN Gradle plugin JARs ──────────────────────────────
+      # com.facebook.react.settings lives in a nested composite build inside
+      # @react-native/gradle-plugin and is NOT exposed via includeBuild alone.
+      # The settings.gradle loads it via buildscript classpath instead, which
+      # requires the pre-compiled JARs. The npm package does not ship them, so
+      # we build them here using the android gradlew with --project-dir.
+      - name: Pre-build RN Gradle plugin JARs
+        script: |
+          MOBILE="$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile"
+          RN_PLUGIN="$MOBILE/node_modules/@react-native/gradle-plugin"
+          SJAR="$RN_PLUGIN/settings-plugin/build/libs/settings-plugin.jar"
+          HJAR="$RN_PLUGIN/shared/build/libs/shared.jar"
+
+          if [ -f "$SJAR" ] && [ -f "$HJAR" ]; then
+            echo "✓ JARs already present — skipping build"
+            ls -lh "$SJAR" "$HJAR"
+            exit 0
+          fi
+
+          echo "⚠ JARs missing — building :settings-plugin:jar and :shared:jar..."
+          cd "$MOBILE/android"
+          chmod +x gradlew
+          ./gradlew \
+            --project-dir "$RN_PLUGIN" \
+            :settings-plugin:jar :shared:jar \
+            --no-daemon --console=plain --stacktrace \
+            2>&1 | tail -60
+
+          ls -lh "$SJAR" && echo "✓ settings-plugin.jar built"
+          ls -lh "$HJAR" && echo "✓ shared.jar built"
+
       # ── 4. Android SDK components & local.properties ──────────────────────
       # Codemagic exposes the Android SDK as ANDROID_HOME on all machine types;
       # ANDROID_SDK_ROOT is a deprecated alias — accept either.
