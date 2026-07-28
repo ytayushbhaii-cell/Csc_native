@@ -58,14 +58,18 @@ workflows:
             exit 0
           fi
 
-          echo "⚠ JARs missing — building :settings-plugin:jar and :shared:jar..."
-          cd "$MOBILE/android"
+          # The @react-native/gradle-plugin npm package ships only Kotlin source,
+          # no pre-built JARs. We must compile them before the android Gradle run.
+          #
+          # IMPORTANT: use the plugin's OWN gradlew (Gradle 8.14.3), NOT the
+          # android project's gradlew (8.11.1). The plugin's settings.gradle.kts
+          # was written for 8.14.3 and uses APIs absent in earlier versions.
+          echo "⚠ JARs missing — building with plugin's own gradlew (Gradle 8.14.3)..."
+          cd "$RN_PLUGIN"
           chmod +x gradlew
-          ./gradlew \
-            --project-dir "$RN_PLUGIN" \
-            :settings-plugin:jar :shared:jar \
-            --no-daemon --console=plain --stacktrace \
-            2>&1 | tail -60
+          ./gradlew :settings-plugin:jar :shared:jar \
+            --no-daemon --console=plain \
+            2>&1 | tail -80
 
           ls -lh "$SJAR" && echo "✓ settings-plugin.jar built"
           ls -lh "$HJAR" && echo "✓ shared.jar built"
