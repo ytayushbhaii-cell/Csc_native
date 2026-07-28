@@ -5,13 +5,19 @@ workflows:
     environment:
       vars:
         PACKAGE_NAME: "com.cscsmarttoolkit.app"
+        # Prevent corepack from blocking pnpm when the CI machine's working
+        # directory has a package.json with "packageManager": "yarn@...".
+        COREPACK_ENABLE_STRICT: "0"
       node: 20.18.0
       java: 17
 
     scripts:
       # ── 1. Install pnpm ────────────────────────────────────────────────────
+      # Codemagic ships with corepack; disable it first so npm's global pnpm
+      # binary is used directly (not wrapped by corepack's package-manager shim).
       - name: Install pnpm
         script: |
+          corepack disable 2>/dev/null || true
           npm install -g pnpm@10.26.1 --force
           pnpm --version
 
