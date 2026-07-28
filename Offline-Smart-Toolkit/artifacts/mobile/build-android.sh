@@ -39,9 +39,16 @@ if [[ ! -f "$ANDROID_DIR/local.properties" ]]; then
 fi
 
 # ── Install JS dependencies ────────────────────────────────────────────────
-info "Installing JS dependencies (pnpm)…"
+info "Installing JS dependencies…"
 cd "$SCRIPT_DIR"
-pnpm install --frozen-lockfile 2>/dev/null || pnpm install
+# Use npm ci when package-lock.json is present — gives a fully reproducible
+# install against the pinned lockfile.  Fall back to pnpm for other layouts.
+if [[ -f "package-lock.json" ]]; then
+    info "Using npm ci (package-lock.json found)…"
+    npm ci
+else
+    pnpm install --frozen-lockfile 2>/dev/null || pnpm install
+fi
 success "Dependencies installed"
 
 # ── Parse arguments ────────────────────────────────────────────────────────

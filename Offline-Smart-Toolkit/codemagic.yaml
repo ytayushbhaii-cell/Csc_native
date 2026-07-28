@@ -19,6 +19,16 @@ workflows:
           cd $CM_BUILD_DIR/Offline-Smart-Toolkit
           pnpm install --no-frozen-lockfile
 
+      # ── 2b. Mobile npm dependencies (required for Gradle autolinking) ─────
+      # The mobile package has its own package-lock.json with pinned native
+      # module versions. npm ci installs them into artifacts/mobile/node_modules
+      # so that `react-native config` (called by autolinkLibrariesFromCommand())
+      # can discover and link all native modules during the Gradle configure phase.
+      - name: Install mobile npm dependencies
+        script: |
+          cd $CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile
+          npm ci
+
       # ── 3. Android SDK components ─────────────────────────────────────────
       - name: Accept Android SDK licences & install components
         script: |

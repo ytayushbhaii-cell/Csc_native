@@ -7,10 +7,15 @@ import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
 import com.facebook.react.defaults.DefaultReactActivityDelegate
+import org.devio.rn.splashscreen.SplashScreen
 
 class MainActivity : ReactActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Show the native splash screen before React Native JS loads.
+        // SplashScreen.show() must be called before super.onCreate() so the
+        // splash is visible while the JS bundle initialises.
+        SplashScreen.show(this)
         super.onCreate(null)
     }
 
