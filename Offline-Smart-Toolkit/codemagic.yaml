@@ -73,7 +73,7 @@ workflows:
       # ── 6. Build Release APK ──────────────────────────────────────────────
       - name: Build Release APK
         script: |
-          export PATH="$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/node_modules/.bin:$PATH"
+          export PATH="$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/node_modules/.bin:$NODE_PATH:$PATH"
           mkdir -p "$CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs"
           cd "$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android"
           chmod +x gradlew

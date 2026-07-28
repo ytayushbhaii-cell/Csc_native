@@ -19,7 +19,13 @@ plugins {
 }
 
 extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
-    ex.autolinkLibrariesFromCommand()
+    // Use explicit `node` + path so Gradle's JVM subprocess does NOT need
+    // `react-native` on $PATH (Gradle may not reliably inherit the shell PATH).
+    // workingDirectory defaults to rootDirectory.dir("../") = mobile/, so
+    // 'node_modules/.bin/react-native' resolves to mobile/node_modules/.bin/react-native.
+    // Must pass List<String> — the plugin passes each element as a separate
+    // ProcessBuilder argument; a single string would be treated as one token.
+    ex.autolinkLibrariesFromCommand(['node', '--no-warnings', 'node_modules/.bin/react-native', 'config'])
 }
 
 rootProject.name = 'CSC Smart Toolkit'
