@@ -90,9 +90,9 @@ workflows:
             LOG="$CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs/release-apk.log"
             echo ""
             echo "══════════════════ ROOT CAUSE ══════════════════"
-            # Show the "What went wrong" block + up to 30 lines after it
-            grep -n "What went wrong\|Caused by:\|> Could not\|> Failed to\|Cannot find\|does not exist\|is not a file\|FileNotFoundException\|NullPointerException\|ClassNotFoundException\|UnsupportedOperationException\|NoSuchMethodError\|error:" "$LOG" \
-              | head -30 || true
+            # -i = case-insensitive so ERROR:/error: both match; also catch autolinkLibraries
+            grep -in "What went wrong\|Caused by:\|> Could not\|> Failed to\|Cannot find\|does not exist\|is not a file\|FileNotFoundException\|NullPointerException\|ClassNotFoundException\|UnsupportedOperationException\|NoSuchMethodError\|error:\|autolinkLibraries" "$LOG" \
+              | head -40 || true
             echo "══════════════════════════════════════════════"
           fi
           exit $BUILD_EXIT
@@ -117,8 +117,8 @@ workflows:
             LOG="$CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs/release-aab.log"
             echo ""
             echo "══════════════════ ROOT CAUSE ══════════════════"
-            grep -n "What went wrong\|Caused by:\|> Could not\|> Failed to\|Cannot find\|does not exist\|is not a file\|FileNotFoundException\|NullPointerException\|ClassNotFoundException\|UnsupportedOperationException\|NoSuchMethodError\|error:" "$LOG" \
-              | head -30 || true
+            grep -in "What went wrong\|Caused by:\|> Could not\|> Failed to\|Cannot find\|does not exist\|is not a file\|FileNotFoundException\|NullPointerException\|ClassNotFoundException\|UnsupportedOperationException\|NoSuchMethodError\|error:\|autolinkLibraries" "$LOG" \
+              | head -40 || true
             echo "══════════════════════════════════════════════"
           fi
           exit $BUILD_EXIT
