@@ -74,8 +74,17 @@ workflows:
       - name: Build Release APK
         script: |
           export PATH="$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/node_modules/.bin:$PATH"
+          MOBILE="$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile"
+          LOG="$CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs/release-apk.log"
           mkdir -p "$CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs"
-          cd "$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/android"
+
+          # ── Pre-flight: confirm paths Gradle needs at configure time ────────
+          echo "── node: $(node --version 2>&1)"
+          echo "── react-native CLI: $(ls ${MOBILE}/node_modules/.bin/react-native 2>&1)"
+          echo "── gradle-plugin local:     $(ls ${MOBILE}/node_modules/@react-native/gradle-plugin 2>/dev/null && echo OK || echo MISSING)"
+          echo "── gradle-plugin workspace: $(ls $CM_BUILD_DIR/Offline-Smart-Toolkit/node_modules/@react-native/gradle-plugin 2>/dev/null && echo OK || echo MISSING)"
+
+          cd "$MOBILE/android"
           chmod +x gradlew
           ./gradlew assembleRelease \
             --no-daemon \
@@ -84,16 +93,17 @@ workflows:
             --stacktrace \
             --info \
             -PhermesEnabled=true \
-            2>&1 | tee "$CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs/release-apk.log"
+            2>&1 | tee "$LOG"
           BUILD_EXIT=${PIPESTATUS[0]}
           if [ $BUILD_EXIT -ne 0 ]; then
-            LOG="$CM_BUILD_DIR/Offline-Smart-Toolkit/build-logs/release-apk.log"
             echo ""
-            echo "══════════════════ ROOT CAUSE ══════════════════"
-            # Show the "What went wrong" block + up to 30 lines after it
-            grep -n "What went wrong\|Caused by:\|> Could not\|> Failed to\|Cannot find\|does not exist\|is not a file\|FileNotFoundException\|NullPointerException\|ClassNotFoundException\|UnsupportedOperationException\|NoSuchMethodError\|error:" "$LOG" \
-              | head -30 || true
-            echo "══════════════════════════════════════════════"
+            echo "══════════════════ LOG HEAD (first 120 lines) ══════════════════"
+            head -120 "$LOG"
+            echo ""
+            echo "══════════════════ ERROR LINES ══════════════════"
+            grep -En "What went wrong|Caused by:|> Could not|> Failed to|Cannot find|does not exist|FileNotFoundException|NoSuchMethodError|error:" "$LOG" \
+              | head -40 || true
+            echo "══════════════════════════════════════════════════"
           fi
           exit $BUILD_EXIT
 
