@@ -48,7 +48,27 @@ workflows:
       - name: Pre-build RN Gradle plugin JARs
         script: |
           MOBILE="$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile"
-          RN_PLUGIN="$MOBILE/node_modules/@react-native/gradle-plugin"
+
+          # ── Dynamically locate @react-native/gradle-plugin ──────────────────
+          # npm ci may install it nested under react-native/node_modules/ instead
+          # of hoisted to the top level. Use require.resolve() to find it.
+          RN_PLUGIN=$(node -e "
+            var paths = [
+              '$MOBILE/node_modules',
+              '$MOBILE/node_modules/react-native/node_modules',
+              '$CM_BUILD_DIR/Offline-Smart-Toolkit/node_modules'
+            ];
+            for (var i = 0; i < paths.length; i++) {
+              try {
+                var p = require.resolve('@react-native/gradle-plugin/package.json', { paths: [paths[i]] });
+                console.log(require('path').dirname(p));
+                process.exit(0);
+              } catch(e) {}
+            }
+            process.exit(1);
+          " 2>/dev/null) || RN_PLUGIN="$MOBILE/node_modules/@react-native/gradle-plugin"
+          echo "── @react-native/gradle-plugin resolved to: $RN_PLUGIN"
+
           SJAR="$RN_PLUGIN/settings-plugin/build/libs/settings-plugin.jar"
           HJAR="$RN_PLUGIN/shared/build/libs/shared.jar"
 
@@ -84,14 +104,27 @@ workflows:
             --no-daemon --console=plain \
             2>&1 | tail -80
 
-          echo "Copying JARs to node_modules..."
+          echo "Copying JARs to resolved node_modules location: $RN_PLUGIN"
           mkdir -p "$RN_PLUGIN/settings-plugin/build/libs" \
                    "$RN_PLUGIN/shared/build/libs"
           cp settings-plugin/build/libs/settings-plugin.jar "$SJAR"
           cp shared/build/libs/shared.jar "$HJAR"
-
           ls -lh "$SJAR" && echo "✓ settings-plugin.jar installed"
           ls -lh "$HJAR" && echo "✓ shared.jar installed"
+
+          # Also copy to top-level local path if different, so settings.gradle
+          # finds JARs regardless of which resolution path Gradle takes.
+          TOP_LEVEL="$MOBILE/node_modules/@react-native/gradle-plugin"
+          if [ "$RN_PLUGIN" != "$TOP_LEVEL" ] && [ -d "$TOP_LEVEL" ]; then
+            echo "Copying JARs also to top-level $TOP_LEVEL..."
+            mkdir -p "$TOP_LEVEL/settings-plugin/build/libs" \
+                     "$TOP_LEVEL/shared/build/libs"
+            cp settings-plugin/build/libs/settings-plugin.jar \
+               "$TOP_LEVEL/settings-plugin/build/libs/settings-plugin.jar"
+            cp shared/build/libs/shared.jar \
+               "$TOP_LEVEL/shared/build/libs/shared.jar"
+            echo "✓ JARs also copied to top-level"
+          fi
 
       # ── 4. Android SDK components & local.properties ──────────────────────
       # Codemagic exposes the Android SDK as ANDROID_HOME on all machine types;
@@ -135,8 +168,9 @@ workflows:
           # ── Pre-flight: confirm paths Gradle needs at configure time ────────
           echo "── node: $(node --version 2>&1)"
           echo "── react-native CLI: $(ls ${MOBILE}/node_modules/.bin/react-native 2>&1)"
-          echo "── gradle-plugin local:     $(ls ${MOBILE}/node_modules/@react-native/gradle-plugin 2>/dev/null && echo OK || echo MISSING)"
-          echo "── gradle-plugin workspace: $(ls $CM_BUILD_DIR/Offline-Smart-Toolkit/node_modules/@react-native/gradle-plugin 2>/dev/null && echo OK || echo MISSING)"
+          echo "── gradle-plugin local top-level: $(ls ${MOBILE}/node_modules/@react-native/gradle-plugin 2>/dev/null && echo OK || echo MISSING)"
+          echo "── gradle-plugin local nested:    $(ls ${MOBILE}/node_modules/react-native/node_modules/@react-native/gradle-plugin 2>/dev/null && echo OK || echo MISSING)"
+          echo "── gradle-plugin workspace:       $(ls $CM_BUILD_DIR/Offline-Smart-Toolkit/node_modules/@react-native/gradle-plugin 2>/dev/null && echo OK || echo MISSING)"
 
           cd "$MOBILE/android"
           chmod +x gradlew

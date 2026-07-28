@@ -1,11 +1,19 @@
 // pluginManagement MUST be the first block in settings.gradle (Gradle rule).
 pluginManagement {
-    // Locate the React Native Gradle plugin — tries mobile/node_modules first,
-    // then workspace root (pnpm hoisted), then pnpm virtual-store as fallback.
-    def local     = file("../node_modules/@react-native/gradle-plugin")
-    def workspace = file("../../../node_modules/@react-native/gradle-plugin")
-    def pnpmStore = file("../../../node_modules/.pnpm/node_modules/@react-native/gradle-plugin")
-    def rnPlugin  = (local.exists() ? local : workspace.exists() ? workspace : pnpmStore).canonicalFile
+    // Locate the React Native Gradle plugin.
+    // Priority:
+    //   1. mobile/node_modules/@react-native/gradle-plugin          (npm hoisted to top level)
+    //   2. mobile/node_modules/react-native/node_modules/...        (npm nested under react-native)
+    //   3. workspace root node_modules (pnpm hoisted)
+    //   4. pnpm virtual-store fallback
+    def local       = file("../node_modules/@react-native/gradle-plugin")
+    def localNested = file("../node_modules/react-native/node_modules/@react-native/gradle-plugin")
+    def workspace   = file("../../../node_modules/@react-native/gradle-plugin")
+    def pnpmStore   = file("../../../node_modules/.pnpm/node_modules/@react-native/gradle-plugin")
+    def rnPlugin    = (local.exists() ? local
+                       : localNested.exists() ? localNested
+                       : workspace.exists()   ? workspace
+                       : pnpmStore).canonicalFile
     // includeBuild is required for project-phase plugins:
     //   com.facebook.react          (app/build.gradle)
     //   com.facebook.react.rootproject (android/build.gradle)
@@ -29,10 +37,14 @@ pluginManagement {
 // the plugin the legacy way. The Codemagic step "Pre-build RN Gradle plugin
 // JARs" ensures these JARs exist before the main Gradle run.
 buildscript {
-    def local     = file("../node_modules/@react-native/gradle-plugin")
-    def workspace = file("../../../node_modules/@react-native/gradle-plugin")
-    def pnpmStore = file("../../../node_modules/.pnpm/node_modules/@react-native/gradle-plugin")
-    def rnPlugin  = (local.exists() ? local : workspace.exists() ? workspace : pnpmStore).canonicalFile
+    def local       = file("../node_modules/@react-native/gradle-plugin")
+    def localNested = file("../node_modules/react-native/node_modules/@react-native/gradle-plugin")
+    def workspace   = file("../../../node_modules/@react-native/gradle-plugin")
+    def pnpmStore   = file("../../../node_modules/.pnpm/node_modules/@react-native/gradle-plugin")
+    def rnPlugin    = (local.exists() ? local
+                       : localNested.exists() ? localNested
+                       : workspace.exists()   ? workspace
+                       : pnpmStore).canonicalFile
     repositories {
         mavenCentral()
         google()
