@@ -21,6 +21,17 @@ buildscript {
         reactNativeVersion = "0.81.5"
     }
 
+    // ── Locate @react-native/gradle-plugin (mirrors settings.gradle resolution) ──
+    // Priority: local top-level → local nested under react-native → workspace → pnpm store
+    def rnLocal       = file("../node_modules/@react-native/gradle-plugin")
+    def rnLocalNested = file("../node_modules/react-native/node_modules/@react-native/gradle-plugin")
+    def rnWorkspace   = file("../../../node_modules/@react-native/gradle-plugin")
+    def rnPnpmStore   = file("../../../node_modules/.pnpm/node_modules/@react-native/gradle-plugin")
+    def rnPlugin      = (rnLocal.exists()       ? rnLocal
+                         : rnLocalNested.exists() ? rnLocalNested
+                         : rnWorkspace.exists()   ? rnWorkspace
+                         : rnPnpmStore).canonicalFile
+
     repositories {
         google()
         mavenCentral()
@@ -29,12 +40,32 @@ buildscript {
     dependencies {
         classpath("com.android.tools.build:gradle:8.11.0")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.20")
+
+        // ── com.facebook.react.rootproject via pre-compiled JARs ─────────────
+        // The @react-native/gradle-plugin npm package is a multi-project Gradle
+        // build. `includeBuild` cannot reliably compile it (the nested composite
+        // requires foojay toolchain resolution + network). We use the same
+        // classpath approach as settings.gradle uses for com.facebook.react.settings.
+        //
+        // Step 3b of codemagic.yaml builds these JARs via:
+        //   ./gradlew :react-native-gradle-plugin:jar :shared:jar
+        // and copies them to:
+        //   ${rnPlugin}/react-native-gradle-plugin/build/libs/
+        //   ${rnPlugin}/shared/build/libs/
+        classpath("com.google.code.gson:gson:2.8.9")
+        classpath("com.google.guava:guava:31.0.1-jre")
+        classpath("org.jetbrains.kotlin:kotlin-stdlib:2.1.20")
+        classpath(files(
+            "${rnPlugin}/react-native-gradle-plugin/build/libs/react-native-gradle-plugin-0.81.5.jar",
+            "${rnPlugin}/shared/build/libs/shared.jar"
+        ))
     }
 }
 
-plugins {
-    id("com.facebook.react.rootproject")
-}
+// Apply com.facebook.react.rootproject via legacy API — works with the
+// buildscript classpath loaded above. This is equivalent to the `plugins {}`
+// block but does not require includeBuild to compile the Gradle plugin project.
+apply plugin: "com.facebook.react.rootproject"
 
 allprojects {
     repositories {
