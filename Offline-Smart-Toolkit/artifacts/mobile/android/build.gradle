@@ -11,7 +11,7 @@ buildscript {
         ndkVersion         = "27.1.12297006"
 
         // ── Kotlin / AGP ─────────────────────────────────────────────────────
-        // AGP 8.11.0 requires Gradle 8.13+ (configured in gradle-wrapper.properties).
+        // AGP 8.11.0 requires Gradle 8.11.1+ (configured in gradle-wrapper.properties).
         // Kotlin 2.1.20 is compatible with RN 0.81.
         kotlinVersion      = "2.1.20"
 

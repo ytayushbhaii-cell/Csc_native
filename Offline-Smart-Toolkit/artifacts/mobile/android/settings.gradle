@@ -6,9 +6,6 @@ pluginManagement {
     def workspace = file("../../../node_modules/@react-native/gradle-plugin")
     def pnpmStore = file("../../../node_modules/.pnpm/node_modules/@react-native/gradle-plugin")
     def rnPlugin  = (local.exists() ? local : workspace.exists() ? workspace : pnpmStore).canonicalFile
-    // includeBuild is still needed for project-phase plugins:
-    //   com.facebook.react          (app/build.gradle)
-    //   com.facebook.react.rootproject (android/build.gradle)
     includeBuild(rnPlugin.absolutePath)
     repositories {
         google()
@@ -17,42 +14,13 @@ pluginManagement {
     }
 }
 
-// ── Gradle 8.13 settings-phase composite-build workaround ────────────────────
-// Gradle 8.13 only exposes ROOT-PROJECT plugins from an includeBuild composite
-// during settings-phase plugin resolution. com.facebook.react.settings lives in
-// :settings-plugin (a SUBPROJECT of @react-native/gradle-plugin), so Gradle
-// cannot find it via includeBuild alone and `plugins {}` fails with "not found".
-//
-// Fix: load the pre-compiled JARs directly via buildscript classpath, then apply
-// the plugin the legacy way. Both JARs — along with their transitive sources —
-// are shipped inside the @react-native/gradle-plugin npm package.
-buildscript {
-    def local     = file("../node_modules/@react-native/gradle-plugin")
-    def workspace = file("../../../node_modules/@react-native/gradle-plugin")
-    def pnpmStore = file("../../../node_modules/.pnpm/node_modules/@react-native/gradle-plugin")
-    def rnPlugin  = (local.exists() ? local : workspace.exists() ? workspace : pnpmStore).canonicalFile
-    repositories {
-        mavenCentral()
-        google()
-    }
-    dependencies {
-        // shared.jar depends on Gson + Guava at runtime; add them explicitly
-        // (they are NOT fat-jarred into shared.jar).
-        classpath("com.google.code.gson:gson:2.8.9")
-        classpath("com.google.guava:guava:31.0.1-jre")
-        // Kotlin stdlib is bundled in Gradle 8.x, but add explicitly to
-        // guarantee ABI compatibility with the Kotlin 2.1.20-compiled JARs.
-        classpath("org.jetbrains.kotlin:kotlin-stdlib:2.1.20")
-        // The two JARs that provide ReactSettingsPlugin / ReactSettingsExtension.
-        classpath(files(
-            "${rnPlugin}/settings-plugin/build/libs/settings-plugin.jar",
-            "${rnPlugin}/shared/build/libs/shared.jar"
-        ))
-    }
+// Standard React Native 0.74+ approach: resolve com.facebook.react.settings from
+// the includeBuild composite declared above. Works correctly with Gradle 8.11.1.
+// (Gradle 8.12+ broke subproject-plugin resolution from includeBuild composites,
+// which is why we pin Gradle to 8.11.1 in gradle-wrapper.properties.)
+plugins {
+    id("com.facebook.react.settings")
 }
-
-// Apply via legacy API — compatible with the buildscript classpath approach above.
-apply plugin: "com.facebook.react.settings"
 
 extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
     // Prefer explicit node + absolute binary path so Gradle's JVM subprocess
