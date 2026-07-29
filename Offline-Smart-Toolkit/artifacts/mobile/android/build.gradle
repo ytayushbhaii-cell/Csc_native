@@ -55,10 +55,8 @@ buildscript {
         classpath("com.google.code.gson:gson:2.8.9")
         classpath("com.google.guava:guava:31.0.1-jre")
         classpath("org.jetbrains.kotlin:kotlin-stdlib:2.1.20")
-        classpath(files(
-            "${rnPlugin}/react-native-gradle-plugin/build/libs/react-native-gradle-plugin-0.81.5.jar",
-            "${rnPlugin}/shared/build/libs/shared.jar"
-        ))
+        classpath(fileTree("${rnPlugin}/react-native-gradle-plugin/build/libs").include("*.jar"))
+        classpath(fileTree("${rnPlugin}/shared/build/libs").include("*.jar"))
     }
 }
 

@@ -71,7 +71,7 @@ workflows:
 
           SJAR="$RN_PLUGIN/settings-plugin/build/libs/settings-plugin.jar"
           HJAR="$RN_PLUGIN/shared/build/libs/shared.jar"
-          RJAR="$RN_PLUGIN/react-native-gradle-plugin/build/libs/react-native-gradle-plugin-0.81.5.jar"
+          RJAR="$RN_PLUGIN/react-native-gradle-plugin/build/libs/react-native-gradle-plugin.jar"
 
           if [ -f "$SJAR" ] && [ -f "$HJAR" ] && [ -f "$RJAR" ]; then
             echo "✓ JARs already present — skipping build"
@@ -105,19 +105,20 @@ workflows:
             --no-daemon --console=plain \
             2>&1 | tail -80
 
-          RN_PLUGIN_JAR=$(ls react-native-gradle-plugin/build/libs/react-native-gradle-plugin-*.jar 2>/dev/null | head -1)
+          # JAR name has no version suffix (subproject has no version set): react-native-gradle-plugin.jar
+          RN_PLUGIN_JAR=$(ls react-native-gradle-plugin/build/libs/*.jar 2>/dev/null | head -1)
           [ -z "$RN_PLUGIN_JAR" ] && { echo "ERROR: react-native-gradle-plugin JAR not found"; ls react-native-gradle-plugin/build/libs/ 2>/dev/null; exit 1; }
           echo "react-native-gradle-plugin JAR: $RN_PLUGIN_JAR"
 
+          DEST_RJAR="$RN_PLUGIN/react-native-gradle-plugin/build/libs/react-native-gradle-plugin.jar"
           echo "Copying JARs to resolved node_modules location: $RN_PLUGIN"
           mkdir -p "$RN_PLUGIN/react-native-gradle-plugin/build/libs" \
                    "$RN_PLUGIN/settings-plugin/build/libs" \
                    "$RN_PLUGIN/shared/build/libs"
-          cp "$RN_PLUGIN_JAR" \
-             "$RN_PLUGIN/react-native-gradle-plugin/build/libs/react-native-gradle-plugin-0.81.5.jar"
+          cp "$RN_PLUGIN_JAR" "$DEST_RJAR"
           cp settings-plugin/build/libs/settings-plugin.jar "$SJAR"
           cp shared/build/libs/shared.jar "$HJAR"
-          ls -lh "$RN_PLUGIN/react-native-gradle-plugin/build/libs/react-native-gradle-plugin-0.81.5.jar" && echo "✓ react-native-gradle-plugin.jar installed"
+          ls -lh "$DEST_RJAR" && echo "✓ react-native-gradle-plugin.jar installed"
           ls -lh "$SJAR" && echo "✓ settings-plugin.jar installed"
           ls -lh "$HJAR" && echo "✓ shared.jar installed"
 
@@ -130,7 +131,7 @@ workflows:
                      "$TOP_LEVEL/settings-plugin/build/libs" \
                      "$TOP_LEVEL/shared/build/libs"
             cp "$RN_PLUGIN_JAR" \
-               "$TOP_LEVEL/react-native-gradle-plugin/build/libs/react-native-gradle-plugin-0.81.5.jar"
+               "$TOP_LEVEL/react-native-gradle-plugin/build/libs/react-native-gradle-plugin.jar"
             cp settings-plugin/build/libs/settings-plugin.jar \
                "$TOP_LEVEL/settings-plugin/build/libs/settings-plugin.jar"
             cp shared/build/libs/shared.jar \
