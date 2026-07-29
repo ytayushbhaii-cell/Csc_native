@@ -39,6 +39,19 @@ workflows:
           cd $CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile
           npm ci
 
+          # react-native 0.74+ strips ReactAndroid/gradle.properties from the
+          # published npm tarball. The com.facebook.react Gradle plugin reads
+          # this file for VERSION_NAME — create it if absent.
+          RN_DIR="$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/node_modules/react-native"
+          GRAD_PROPS="$RN_DIR/ReactAndroid/gradle.properties"
+          if [ -d "$RN_DIR" ] && [ ! -f "$GRAD_PROPS" ]; then
+            mkdir -p "$RN_DIR/ReactAndroid"
+            printf "# Auto-generated: file missing from npm package\nVERSION_NAME=0.81.5\n" > "$GRAD_PROPS"
+            echo "✓ Created $GRAD_PROPS"
+          else
+            echo "✓ $GRAD_PROPS already present"
+          fi
+
       # ── 3b. Pre-build RN Gradle plugin JARs ──────────────────────────────
       # com.facebook.react.settings lives in a nested composite build inside
       # @react-native/gradle-plugin and is NOT exposed via includeBuild alone.
