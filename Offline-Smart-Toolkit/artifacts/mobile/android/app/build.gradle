@@ -19,6 +19,10 @@ react {
     reactNativeDir = reactNativeDir
     hermesCommand  = "${reactNativeDir}/sdks/hermesc/%OS-BIN%/hermesc"
     codegenDir     = codegenDir
+    // Explicitly point at the CLI package binary so the RN Gradle plugin
+    // can run autolinking even when node_modules/.bin/react-native symlink
+    // is absent (npm ci on Codemagic sometimes skips .bin wiring).
+    cliFile        = file("${mobileNodeModules}/@react-native-community/cli/build/bin.js")
 }
 
 // ── Release signing from key.properties ──────────────────────────────────────

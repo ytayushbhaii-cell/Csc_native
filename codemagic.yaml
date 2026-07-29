@@ -42,7 +42,12 @@ workflows:
           # react-native 0.74+ strips ReactAndroid/gradle.properties from the
           # published npm tarball. The com.facebook.react Gradle plugin reads
           # this file for VERSION_NAME — create it if absent.
-          RN_DIR="$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile/node_modules/react-native"
+          MOBILE="$CM_BUILD_DIR/Offline-Smart-Toolkit/artifacts/mobile"
+
+          # ── Fix 1: ReactAndroid/gradle.properties ───────────────────────────
+          # react-native 0.74+ strips this file from the published npm tarball.
+          # The com.facebook.react Gradle plugin reads it for VERSION_NAME.
+          RN_DIR="$MOBILE/node_modules/react-native"
           GRAD_PROPS="$RN_DIR/ReactAndroid/gradle.properties"
           if [ -d "$RN_DIR" ] && [ ! -f "$GRAD_PROPS" ]; then
             mkdir -p "$RN_DIR/ReactAndroid"
@@ -50,6 +55,24 @@ workflows:
             echo "✓ Created $GRAD_PROPS"
           else
             echo "✓ $GRAD_PROPS already present"
+          fi
+
+          # ── Fix 2: .bin/react-native symlink ────────────────────────────────
+          # npm ci on Codemagic sometimes skips .bin symlink creation.
+          # The RN Gradle plugin needs this (or the explicit cliFile) for
+          # autolinkLibrariesFromCommand() during the configure phase.
+          CLI_BIN="$MOBILE/node_modules/.bin/react-native"
+          if [ ! -e "$CLI_BIN" ]; then
+            CLI_ACTUAL=$(find "$MOBILE/node_modules/@react-native-community/cli" \
+              -maxdepth 4 -name "bin.js" 2>/dev/null | head -1)
+            if [ -n "$CLI_ACTUAL" ]; then
+              ln -sf "$CLI_ACTUAL" "$CLI_BIN"
+              echo "✓ Recreated .bin/react-native -> $CLI_ACTUAL"
+            else
+              echo "✗ @react-native-community/cli bin.js not found — CLI autolinking may fail"
+            fi
+          else
+            echo "✓ .bin/react-native already present"
           fi
 
       # ── 3b. Pre-build RN Gradle plugin JARs ──────────────────────────────
